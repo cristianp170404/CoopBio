@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cooperadora Escolar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+<div class="layout">
+  <main class="main-content">
+    <header class="topbar">
+      <div>
+        <h1 class="page-title">Panel principal</h1>
+        <p class="page-subtitle">Resumen del ciclo lectivo 2026</p>
+      </div>
+      <div class="topbar-actions">
+        <span class="date-badge" id="fecha-hoy"></span>
+      </div>
+    </header>
+
+    <div class="metrics-grid">
+      <div class="metric-card metric-blue">
+        <div class="metric-label">Alumnos activos</div>
+        <div class="metric-value" id="m-alumnos">–</div>
+        <div class="metric-sub" id="m-alumnos-sub"></div>
+      </div>
+      <div class="metric-card metric-green">
+        <div class="metric-label">Cuotas cobradas</div>
+        <div class="metric-value" id="m-cuotas">–</div>
+        <div class="metric-sub" id="m-cuotas-sub"></div>
+      </div>
+      <div class="metric-card metric-amber">
+        <div class="metric-label">Pendientes de pago</div>
+        <div class="metric-value" id="m-pendientes">–</div>
+        <div class="metric-sub" id="m-pendientes-sub"></div>
+      </div>
+      <div class="metric-card metric-purple">
+        <div class="metric-label">Stock indumentaria</div>
+        <div class="metric-value" id="m-stock">–</div>
+        <div class="metric-sub" id="m-stock-sub"></div>
+      </div>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Últimos pagos</h2>
+          <a href="cuotas.html" class="card-link">Ver todos →</a>
+        </div>
+        <table class="table">
+          <thead><tr><th>Alumno</th><th>Concepto</th><th>Monto</th><th>Estado</th></tr></thead>
+          <tbody id="tbody-pagos"><tr><td colspan="4" style="text-align:center;color:var(--text-3);padding:20px">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Reservas pendientes</h2>
+          <a href="reservas.html" class="card-link">Ver todas →</a>
+        </div>
+        <table class="table">
+          <thead><tr><th>Alumno</th><th>Prenda</th><th>Saldo</th></tr></thead>
+          <tbody id="tbody-reservas"><tr><td colspan="3" style="text-align:center;color:var(--text-3);padding:20px">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:0">
+      <div class="card-header">
+        <h2 class="card-title">Eventos del año</h2>
+        <a href="eventos.html" class="card-link">Ver todos →</a>
+      </div>
+      <div class="events-row" id="eventos-row">
+        <span style="color:var(--text-3);font-size:13px">Cargando...</span>
+      </div>
+    </div>
+  </main>
+</div>
+<div id="toast"></div>
+<script src="/static/api.js"></script>
+<script src="/static/sidebar.js"></script>
+<script>
+document.getElementById('fecha-hoy').textContent =
+  new Date().toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+function fmt(n){ return Number(n).toLocaleString('es-AR'); }
+
+function badgeEstado(e){
+  if(e==='Pagado') return '<span class="badge badge-green">Pagado</span>';
+  if(e==='Pendiente') return '<span class="badge badge-amber">Pendiente</span>';
+  if(e==='Vencido') return '<span class="badge badge-red">Vencido</span>';
+  return '<span class="badge">'+e+'</span>';
+}
+
+function badgeEv(e){
+  if(e==='Activo') return '<span class="badge badge-green">Activo</span>';
+  if(e==='Próximo') return '<span class="badge badge-blue">Próximo</span>';
+  return '<span class="badge badge-amber">Finalizado</span>';
+}
+
+async function cargarDashboard(){
+  try {
+    var d = await API.get('/api/dashboard');
+
+    document.getElementById('m-alumnos').textContent = d.alumnos_activos;
+    document.getElementById('m-alumnos-sub').textContent = 'Total en el padrón';
+
+    document.getElementById('m-cuotas').textContent = '$'+fmt(d.cuotas_cobradas_mes.total);
+    document.getElementById('m-cuotas-sub').textContent = d.cuotas_cobradas_mes.cantidad+' pagos registrados';
+
+    document.getElementById('m-pendientes').textContent = d.pendientes.cantidad;
+    document.getElementById('m-pendientes-sub').textContent = '$'+fmt(d.pendientes.suma)+' por cobrar';
+
+    document.getElementById('m-stock').textContent = d.stock.total;
+    document.getElementById('m-stock-sub').textContent = d.stock.reservado+' prendas reservadas';
+
+    document.getElementById('tbody-pagos').innerHTML = d.ultimos_pagos.length
+      ? d.ultimos_pagos.map(p=>`<tr>
+          <td><strong>${p.apellido}</strong>, ${p.nombre}</td>
+          <td>${p.concepto}${p.mes?' ('+p.mes+')',''||''}</td>
+          <td>$${fmt(p.monto)}</td>
+          <td>${badgeEstado(p.estado)}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="4" style="text-align:center;color:var(--text-3);padding:20px">Sin pagos aún</td></tr>';
+
+    document.getElementById('tbody-reservas').innerHTML = d.reservas_pendientes.length
+      ? d.reservas_pendientes.map(r=>`<tr>
+          <td>${r.alumno_txt}</td>
+          <td>${r.prenda_txt}</td>
+          <td class="${r.saldo>0?'text-red':'text-green'}">$${fmt(r.saldo)}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="3" style="text-align:center;color:var(--text-3);padding:20px">Sin reservas</td></tr>';
+
+    document.getElementById('eventos-row').innerHTML = d.eventos.map(ev=>`
+      <div class="event-chip ${ev.estado==='Activo'?'event-active':'event-upcoming'}">
+        <div class="event-chip-dot"></div>
+        <div>
+          <div class="event-chip-name">${ev.nombre}</div>
+          <div class="event-chip-date">${ev.fecha||'Sin fecha'} · ${badgeEv(ev.estado)}</div>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    showToast('Error cargando datos: '+e.message, 'error');
+  }
+}
+
+cargarDashboard();
+</script>
+</body>
+</html>

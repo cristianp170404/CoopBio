@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Indumentaria – Cooperadora Escolar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+<div class="layout">
+  <main class="main-content">
+    <header class="topbar">
+      <div><h1 class="page-title">Indumentaria</h1><p class="page-subtitle">Inventario y stock de prendas escolares</p></div>
+      <div class="topbar-actions"><button class="btn btn-primary" onclick="abrirModal()">+ Nueva prenda</button></div>
+    </header>
+    <div class="page-content">
+      <div class="filter-bar">
+        <input type="search" id="buscar" placeholder="Buscar prenda..." oninput="filtrar()" style="max-width:240px">
+        <select id="filtro-tipo" onchange="filtrar()" style="max-width:160px">
+          <option value="">Todas las prendas</option>
+          <option>Campera</option><option>Buzo</option><option>Pantalón</option><option>Remera</option>
+        </select>
+      </div>
+      <div class="inv-grid" id="inv-grid">
+        <p style="color:var(--text-3);text-align:center;padding:40px;grid-column:1/-1">Cargando...</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL NUEVA PRENDA -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-title">Nueva prenda</div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Tipo *</label>
+        <select id="p-nombre"><option>Campera</option><option>Buzo</option><option>Pantalón</option><option>Remera</option><option>Otro</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Talle *</label>
+        <select id="p-talle"><option>T2</option><option>T4</option><option>T6</option><option>T8</option><option>T10</option><option>T12</option><option>T14</option><option>T16</option><option>XS</option><option>S</option><option>M</option><option>L</option><option>XL</option><option>XXL</option></select>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Color</label><input type="text" id="p-color" placeholder="Azul"></div>
+      <div class="form-group"><label class="form-label">Stock inicial *</label><input type="number" id="p-stock" value="10" min="0"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Precio ($) *</label><input type="number" id="p-precio" placeholder="8500"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardar()">Guardar prenda</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="/static/api.js"></script>
+<script src="/static/sidebar.js"></script>
+<script>
+var todasPrendas = [];
+
+function fmt(n){ return Number(n).toLocaleString('es-AR'); }
+function stockClass(s,r){ var d=s-r; if(d<=0) return 'stock-out'; if(d<=2) return 'stock-low'; return 'stock-ok'; }
+function stockLabel(s,r){ var d=s-r; if(d<=0) return 'Sin stock'; return d+' disponibles'; }
+
+async function cargar(){
+  try {
+    todasPrendas = await API.get('/api/prendas');
+    filtrar();
+  } catch(e){ showToast(e.message,'error'); }
+}
+
+function filtrar(){
+  var q=document.getElementById('buscar').value.toLowerCase();
+  var tipo=document.getElementById('filtro-tipo').value;
+  var data=todasPrendas.filter(p=>
+    (p.nombre+' '+p.talle+' '+p.color).toLowerCase().includes(q) &&
+    (!tipo||p.nombre===tipo)
+  );
+  render(data);
+}
+
+function render(data){
+  var g = document.getElementById('inv-grid');
+  if(!data.length){ g.innerHTML='<p style="color:var(--text-3);text-align:center;padding:40px;grid-column:1/-1">Sin resultados</p>'; return; }
+  g.innerHTML = data.map(p=>`
+    <div class="inv-card">
+      <div class="inv-card-name">${p.nombre}</div>
+      <div class="inv-card-detail">Talle ${p.talle} · ${p.color||'Sin color'}</div>
+      <div class="inv-card-price">$${fmt(p.precio)}</div>
+      <div class="inv-card-stock">
+        <span class="stock-pill ${stockClass(p.stock,p.reservado)}">${stockLabel(p.stock,p.reservado)}</span>
+        <span style="font-size:11px;color:var(--text-3)">${p.reservado} reserv.</span>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:12px">
+        <button class="btn btn-sm btn-primary" style="flex:1" onclick="window.location='reservas.html'">Reservar</button>
+        <button class="btn btn-sm" onclick="ajustarStock(${p.id},${p.stock})">Ajustar stock</button>
+      </div>
+    </div>`).join('');
+}
+
+function abrirModal(){ document.getElementById('modal').classList.add('open'); }
+function cerrarModal(){ document.getElementById('modal').classList.remove('open'); }
+
+async function guardar(){
+  var pr=parseInt(document.getElementById('p-precio').value)||0;
+  if(!pr){ showToast('Ingresá el precio','error'); return; }
+  try {
+    await API.post('/api/prendas',{
+      nombre:document.getElementById('p-nombre').value,
+      talle:document.getElementById('p-talle').value,
+      color:document.getElementById('p-color').value||'Sin color',
+      stock:parseInt(document.getElementById('p-stock').value)||0,
+      precio:pr
+    });
+    cerrarModal();
+    cargar();
+    showToast('Prenda agregada al inventario');
+  } catch(e){ showToast(e.message,'error'); }
+}
+
+async function ajustarStock(id, stockActual){
+  var n = prompt('Nuevo stock total (actual: '+stockActual+'):', stockActual);
+  if(n===null || isNaN(parseInt(n))) return;
+  try {
+    await API.patch('/api/prendas/'+id+'/stock', {stock:Math.max(0,parseInt(n))});
+    cargar();
+    showToast('Stock actualizado');
+  } catch(e){ showToast(e.message,'error'); }
+}
+
+document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)cerrarModal();});
+cargar();
+</script>
+</body>
+</html>

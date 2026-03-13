@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eventos – Cooperadora Escolar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/main.css">
+<style>
+.evento-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px}
+.evento-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.evento-nombre{font-family:'Syne',sans-serif;font-weight:700;font-size:16px}
+.evento-desc{font-size:12px;color:var(--text-3);margin-top:2px}
+.evento-actions{display:flex;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.evento-stats{display:flex;gap:16px;margin-bottom:10px}
+.evento-stat{font-size:12px;color:var(--text-3)}
+.evento-stat strong{color:var(--text);font-size:14px;display:block}
+</style>
+</head>
+<body>
+<div class="layout">
+  <main class="main-content">
+    <header class="topbar">
+      <div><h1 class="page-title">Eventos</h1><p class="page-subtitle">Actividades y ventas del año</p></div>
+      <div class="topbar-actions"><button class="btn btn-primary" onclick="abrirModalEvento()">+ Nuevo evento</button></div>
+    </header>
+    <div class="page-content">
+      <div id="lista-eventos"><p style="color:var(--text-3);text-align:center;padding:40px">Cargando...</p></div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL NUEVO EVENTO -->
+<div class="modal-overlay" id="modal-evento">
+  <div class="modal">
+    <div class="modal-title">Nuevo evento</div>
+    <div class="form-group"><label class="form-label">Nombre del evento *</label><input type="text" id="ev-nombre" placeholder="Ej: Venta locro"></div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Fecha</label><input type="text" id="ev-fecha" placeholder="25/05/2026 o Abril 2026"></div>
+      <div class="form-group"><label class="form-label">Tipo</label>
+        <select id="ev-tipo"><option>Venta de comida</option><option>Venta de productos</option><option>Sorteo</option><option>Rifas</option><option>Otro</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Descripción</label><input type="text" id="ev-desc" placeholder="Detalle del evento"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="cerrar('modal-evento')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarEvento()">Crear evento</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL COBRO EVENTO -->
+<div class="modal-overlay" id="modal-cobro-ev">
+  <div class="modal">
+    <div class="modal-title" id="cobro-ev-titulo">Registrar cobro</div>
+    <div class="form-group"><label class="form-label">Alumno</label>
+      <select id="cev-alumno-id"><option value="">Seleccionar...</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">Tel. tutor (WhatsApp)</label><input type="tel" id="cev-tel" placeholder="11 1234-5678"></div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Detalle</label><input type="text" id="cev-det" placeholder="Ej: 2 porciones" oninput="previewEv()"></div>
+      <div class="form-group"><label class="form-label">Monto ($)</label><input type="number" id="cev-monto" placeholder="0" oninput="previewEv()"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Forma de pago</label>
+      <select id="cev-forma" onchange="previewEv()"><option>Efectivo</option><option>Débito</option><option>Transferencia</option></select>
+    </div>
+    <div class="form-group" style="margin-bottom:4px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+        <input type="checkbox" id="cev-wa" checked style="width:auto;accent-color:var(--wa)">Enviar comprobante por WhatsApp
+      </label>
+    </div>
+    <div class="wa-preview" id="cev-preview"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="cerrar('modal-cobro-ev')">Cancelar</button>
+      <button class="btn btn-wa" onclick="confirmarCobroEv()">&#128234; Confirmar cobro</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="/static/api.js"></script>
+<script src="/static/sidebar.js"></script>
+<script>
+var eventoActivo = null;
+var alumnosMap = {};
+
+function fmt(n){ return Number(n).toLocaleString('es-AR'); }
+
+function badgeEstado(e){
+  if(e==='Activo') return '<span class="badge badge-green">Activo</span>';
+  if(e==='Próximo') return '<span class="badge badge-blue">Próximo</span>';
+  return '<span class="badge badge-amber">Finalizado</span>';
+}
+function badgePago(e){
+  return e==='Pagado'?'<span class="badge badge-green">Pagado</span>':'<span class="badge badge-amber">Pendiente</span>';
+}
+
+async function cargarAlumnos(){
+  var lista = await API.get('/api/alumnos');
+  var sel = document.getElementById('cev-alumno-id');
+  sel.innerHTML = '<option value="">Seleccionar...</option>';
+  lista.forEach(a=>{
+    alumnosMap[a.id]=a;
+    sel.innerHTML+=`<option value="${a.id}" data-tel="${a.tel_tutor}">${a.apellido}, ${a.nombre}</option>`;
+  });
+  sel.onchange = function(){
+    var opt=sel.options[sel.selectedIndex];
+    document.getElementById('cev-tel').value=opt.dataset.tel||'';
+    previewEv();
+  };
+}
+
+async function cargarEventos(){
+  try {
+    var eventos = await API.get('/api/eventos');
+    render(eventos);
+  } catch(e){ showToast(e.message,'error'); }
+}
+
+function render(eventos){
+  if(!eventos.length){
+    document.getElementById('lista-eventos').innerHTML='<p style="color:var(--text-3);text-align:center;padding:40px">No hay eventos registrados.</p>';
+    return;
+  }
+  document.getElementById('lista-eventos').innerHTML = eventos.map(ev=>{
+    var total = ev.participantes.reduce((s,p)=>s+p.monto,0);
+    var cobrado = ev.participantes.filter(p=>p.estado==='Pagado').reduce((s,p)=>s+p.monto,0);
+    var rows = ev.participantes.map(p=>`<tr>
+      <td>${p.alumno_txt||(p.apellido?p.apellido+', '+p.nombre:'–')}</td>
+      <td>${p.detalle||'–'}</td>
+      <td>$${fmt(p.monto)}</td>
+      <td>${badgePago(p.estado)}</td>
+      <td>${p.estado==='Pagado'
+        ?`<button class="btn btn-sm btn-wa" onclick="enviarWA('${p.alumno_txt||''}','${p.tel_tutor||''}','${ev.nombre}',${p.monto})">&#128234; WA</button>`
+        :`<button class="btn btn-sm btn-primary" onclick="abrirCobroEv(${ev.id},'${p.alumno_txt||''}','${p.tel_tutor||''}',${p.monto})">Cobrar</button>`
+      }</td>
+    </tr>`).join('');
+    return `<div class="evento-card">
+      <div class="evento-header">
+        <div>
+          <div class="evento-nombre">${ev.nombre}</div>
+          <div class="evento-desc">${ev.fecha||'Sin fecha'} · ${ev.tipo} · ${ev.descripcion}</div>
+        </div>
+        ${badgeEstado(ev.estado)}
+      </div>
+      <div class="evento-stats">
+        <div class="evento-stat"><strong>$${fmt(total)}</strong>Total</div>
+        <div class="evento-stat"><strong>$${fmt(cobrado)}</strong>Cobrado</div>
+        <div class="evento-stat"><strong>${ev.participantes.length}</strong>Participantes</div>
+      </div>
+      ${ev.participantes.length?`<table class="table"><thead><tr><th>Alumno</th><th>Detalle</th><th>Monto</th><th>Estado</th><th>Comprobante</th></tr></thead><tbody>${rows}</tbody></table>`:'<p style="font-size:13px;color:var(--text-3)">Sin participantes aún.</p>'}
+      <div class="evento-actions">
+        <button class="btn btn-sm btn-primary" onclick="abrirCobroEv(${ev.id},'','',0)">+ Registrar cobro</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function abrirModalEvento(){ document.getElementById('modal-evento').classList.add('open'); }
+function cerrar(id){ document.getElementById(id).classList.remove('open'); }
+
+async function guardarEvento(){
+  var nm = document.getElementById('ev-nombre').value.trim();
+  if(!nm){ showToast('Ingresá el nombre del evento','error'); return; }
+  try {
+    await API.post('/api/eventos', {
+      nombre:nm, fecha:document.getElementById('ev-fecha').value,
+      tipo:document.getElementById('ev-tipo').value,
+      descripcion:document.getElementById('ev-desc').value
+    });
+    cerrar('modal-evento');
+    cargarEventos();
+    showToast('Evento creado');
+  } catch(e){ showToast(e.message,'error'); }
+}
+
+function abrirCobroEv(evId, alumnoTxt, tel, monto){
+  eventoActivo = evId;
+  document.getElementById('cobro-ev-titulo').textContent='Registrar cobro';
+  document.getElementById('cev-alumno-id').value='';
+  document.getElementById('cev-tel').value=tel||'';
+  document.getElementById('cev-monto').value=monto||'';
+  document.getElementById('cev-det').value='';
+  document.getElementById('modal-cobro-ev').classList.add('open');
+  previewEv();
+}
+
+function previewEv(){
+  var sel=document.getElementById('cev-alumno-id');
+  var alumno=sel.options[sel.selectedIndex]?.text||'(alumno)';
+  var monto=parseInt(document.getElementById('cev-monto').value)||0;
+  var forma=document.getElementById('cev-forma').value;
+  var fecha=new Date().toLocaleDateString('es-AR');
+  document.getElementById('cev-preview').textContent=
+    '🏫 Cooperadora Escolar\nComprobante de pago\n─────────────────────\n'+
+    'Alumno/a: '+alumno+'\nEvento: (evento)\nMonto: $'+fmt(monto)+
+    '\nForma: '+forma+'\nFecha: '+fecha+'\n─────────────────────\n¡Gracias por su pago!';
+}
+
+async function confirmarCobroEv(){
+  var alumnoId=document.getElementById('cev-alumno-id').value;
+  var tel=document.getElementById('cev-tel').value;
+  var monto=parseInt(document.getElementById('cev-monto').value)||0;
+  var det=document.getElementById('cev-det').value;
+  var forma=document.getElementById('cev-forma').value;
+  var wa=document.getElementById('cev-wa').checked;
+  var sel=document.getElementById('cev-alumno-id');
+  var alumnoTxt=sel.options[sel.selectedIndex]?.text||'';
+  if(!monto){ showToast('Ingresá el monto','error'); return; }
+  try {
+    await API.post('/api/eventos/'+eventoActivo+'/cobros',{
+      alumno_id:alumnoId?parseInt(alumnoId):null,
+      alumno_txt:alumnoTxt, tel_tutor:tel, detalle:det, monto, forma_pago:forma
+    });
+    cerrar('modal-cobro-ev');
+    cargarEventos();
+    if(wa&&tel) abrirWA(tel, comprobante(alumnoTxt,'Evento',monto,forma));
+    showToast('Cobro registrado'+(wa?' y WhatsApp abierto':''));
+  } catch(e){ showToast(e.message,'error'); }
+}
+
+function enviarWA(alumno,tel,concepto,monto){
+  abrirWA(tel,comprobante(alumno,concepto,monto,''));
+}
+
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open')});
+});
+
+async function init(){ await cargarAlumnos(); cargarEventos(); }
+init();
+</script>
+</body>
+</html>

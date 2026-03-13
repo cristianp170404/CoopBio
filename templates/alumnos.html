@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alumnos – Cooperadora Escolar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+<div class="layout">
+  <main class="main-content">
+    <header class="topbar">
+      <div>
+        <h1 class="page-title">Alumnos</h1>
+        <p class="page-subtitle">Gestión del padrón escolar</p>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-primary" onclick="abrirModal()">+ Nuevo alumno</button>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="filter-bar">
+        <input type="search" id="buscar" placeholder="Buscar por nombre, apellido o DNI..." oninput="filtrar()">
+        <select id="filtro-anio" onchange="filtrar()" style="max-width:150px">
+          <option value="">Todos los años</option>
+          <option>1° año</option><option>2° año</option><option>3° año</option>
+          <option>4° año</option><option>5° año</option><option>6° año</option>
+        </select>
+        <span id="contador" style="font-size:12px;color:var(--text-3);margin-left:4px"></span>
+      </div>
+
+      <div class="card" style="margin:0;padding:0;overflow:hidden">
+        <table class="table" id="tabla-alumnos">
+          <thead>
+            <tr>
+              <th>Apellido y nombre</th><th>DNI</th><th>Año</th>
+              <th>Tel. alumno</th><th>Tel. tutor (WhatsApp)</th><th>Estado</th><th style="width:80px"></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"><tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:32px">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL ALUMNO -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-titulo">Nuevo alumno</div>
+    <input type="hidden" id="f-id">
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Apellido *</label><input type="text" id="f-apellido" placeholder="Apellido"></div>
+      <div class="form-group"><label class="form-label">Nombre *</label><input type="text" id="f-nombre" placeholder="Nombre"></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">DNI *</label><input type="text" id="f-dni" placeholder="12345678"></div>
+      <div class="form-group"><label class="form-label">Año *</label>
+        <select id="f-anio"><option value="">Seleccionar...</option>
+          <option>1° año</option><option>2° año</option><option>3° año</option>
+          <option>4° año</option><option>5° año</option><option>6° año</option></select>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Tel. alumno</label><input type="tel" id="f-tel-alumno" placeholder="11 1234-5678"></div>
+      <div class="form-group"><label class="form-label">Tel. tutor (WhatsApp) *</label><input type="tel" id="f-tel-tutor" placeholder="11 8765-4321"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardar()">Guardar alumno</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="/static/api.js"></script>
+<script src="/static/sidebar.js"></script>
+<script>
+var todosAlumnos = [];
+
+async function cargar(){
+  try {
+    todosAlumnos = await API.get('/api/alumnos');
+    filtrar();
+  } catch(e){ showToast(e.message,'error'); }
+}
+
+function filtrar(){
+  var q = document.getElementById('buscar').value.toLowerCase();
+  var anio = document.getElementById('filtro-anio').value;
+  var data = todosAlumnos.filter(a =>
+    (a.apellido+' '+a.nombre+' '+a.dni).toLowerCase().includes(q) &&
+    (!anio || a.anio === anio)
+  );
+  render(data);
+}
+
+function render(data){
+  var tb = document.getElementById('tbody');
+  document.getElementById('contador').textContent = data.length+' alumno'+(data.length!==1?'s':'');
+  if(!data.length){
+    tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:32px">Sin resultados</td></tr>';
+    return;
+  }
+  tb.innerHTML = data.map(a=>`<tr>
+    <td><strong>${a.apellido}</strong>, ${a.nombre}</td>
+    <td>${a.dni}</td><td>${a.anio}</td>
+    <td>${a.tel_alumno||'–'}</td>
+    <td><a href="https://wa.me/549${(a.tel_tutor||'').replace(/\D/g,'')}" target="_blank"
+       class="btn btn-sm btn-wa" style="font-size:11px">&#128234; ${a.tel_tutor}</a></td>
+    <td><span class="badge badge-green">Activo</span></td>
+    <td><button class="btn btn-sm" onclick="editarAlumno(${a.id})">Editar</button></td>
+  </tr>`).join('');
+}
+
+function abrirModal(){
+  document.getElementById('f-id').value='';
+  document.getElementById('modal-titulo').textContent='Nuevo alumno';
+  ['f-apellido','f-nombre','f-dni','f-tel-alumno','f-tel-tutor'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('f-anio').value='';
+  document.getElementById('modal').classList.add('open');
+}
+
+function editarAlumno(id){
+  var a = todosAlumnos.find(x=>x.id===id);
+  if(!a) return;
+  document.getElementById('modal-titulo').textContent='Editar alumno';
+  document.getElementById('f-id').value=id;
+  document.getElementById('f-apellido').value=a.apellido;
+  document.getElementById('f-nombre').value=a.nombre;
+  document.getElementById('f-dni').value=a.dni;
+  document.getElementById('f-anio').value=a.anio;
+  document.getElementById('f-tel-alumno').value=a.tel_alumno||'';
+  document.getElementById('f-tel-tutor').value=a.tel_tutor;
+  document.getElementById('modal').classList.add('open');
+}
+
+function cerrarModal(){ document.getElementById('modal').classList.remove('open'); }
+
+async function guardar(){
+  var id = document.getElementById('f-id').value;
+  var body = {
+    apellido: document.getElementById('f-apellido').value.trim(),
+    nombre:   document.getElementById('f-nombre').value.trim(),
+    dni:      document.getElementById('f-dni').value.trim(),
+    anio:     document.getElementById('f-anio').value,
+    tel_alumno: document.getElementById('f-tel-alumno').value.trim(),
+    tel_tutor:  document.getElementById('f-tel-tutor').value.trim(),
+  };
+  if(!body.apellido||!body.nombre||!body.dni||!body.anio||!body.tel_tutor){
+    showToast('Completá los campos obligatorios','error'); return;
+  }
+  try {
+    if(id){ await API.put('/api/alumnos/'+id, body); showToast('Alumno actualizado'); }
+    else   { await API.post('/api/alumnos', body);   showToast('Alumno guardado'); }
+    cerrarModal();
+    cargar();
+  } catch(e){ showToast(e.message,'error'); }
+}
+
+document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)cerrarModal();});
+cargar();
+</script>
+</body>
+</html>

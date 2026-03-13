@@ -189,12 +189,12 @@ def _seed_demo(conn):
 
 @app.route('/')
 def index():
-    return send_from_directory('templates', 'index.html')
+    return render_template('index.html')
 
 @app.route('/<path:filename>')
 def serve_html(filename):
     if filename.endswith('.html'):
-        return send_from_directory('templates', filename)
+        return render_template(filename)
     return send_from_directory('static', filename)
 
 # ── API: ALUMNOS ──────────────────────────────────────────────────────────────

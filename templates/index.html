@@ -7,6 +7,16 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/css/main.css">
+<style>
+.metrics-grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:14px}
+@media(min-width:900px){.metrics-grid-2{grid-template-columns:repeat(4,1fr)}}
+.event-stat-row{display:flex;gap:24px;flex-wrap:wrap;margin:8px 0}
+.event-stat-item{font-size:12px;color:var(--text-3)}
+.event-stat-item strong{display:block;font-size:18px;font-weight:700;font-family:'Syne',sans-serif}
+.event-stat-item.green strong{color:var(--green)}
+.event-stat-item.amber strong{color:var(--amber)}
+.event-stat-item.blue strong{color:var(--blue)}
+</style>
 </head>
 <body>
 <div class="layout">
@@ -21,26 +31,44 @@
       </div>
     </header>
 
-    <div class="metrics-grid">
+    <!-- MÉTRICAS PRINCIPALES -->
+    <div class="metrics-grid" id="metrics-grid">
       <div class="metric-card metric-blue">
         <div class="metric-label">Alumnos activos</div>
         <div class="metric-value" id="m-alumnos">–</div>
-        <div class="metric-sub" id="m-alumnos-sub"></div>
+        <div class="metric-sub" id="m-alumnos-sub">Cargando...</div>
       </div>
       <div class="metric-card metric-green">
         <div class="metric-label">Cuotas cobradas</div>
         <div class="metric-value" id="m-cuotas">–</div>
-        <div class="metric-sub" id="m-cuotas-sub"></div>
+        <div class="metric-sub" id="m-cuotas-sub">Cargando...</div>
       </div>
       <div class="metric-card metric-amber">
         <div class="metric-label">Pendientes de pago</div>
         <div class="metric-value" id="m-pendientes">–</div>
-        <div class="metric-sub" id="m-pendientes-sub"></div>
+        <div class="metric-sub" id="m-pendientes-sub">Cargando...</div>
       </div>
       <div class="metric-card metric-purple">
         <div class="metric-label">Stock indumentaria</div>
         <div class="metric-value" id="m-stock">–</div>
-        <div class="metric-sub" id="m-stock-sub"></div>
+        <div class="metric-sub" id="m-stock-sub">Cargando...</div>
+      </div>
+    </div>
+
+    <!-- SEGUNDA FILA: Recaudación total + Eventos -->
+    <div class="metrics-grid-2" style="margin-bottom:20px">
+      <div class="metric-card" style="background:linear-gradient(135deg,var(--green) 0%,#059669 100%);color:#fff;border:none">
+        <div class="metric-label" style="color:rgba(255,255,255,.8)">Recaudación total</div>
+        <div class="metric-value" id="m-recaudacion" style="color:#fff">–</div>
+        <div class="metric-sub" style="color:rgba(255,255,255,.7)">Cuotas + eventos + indumentaria</div>
+      </div>
+      <div class="card" style="margin:0;padding:18px">
+        <div class="metric-label" style="margin-bottom:10px">Eventos – resumen rendición</div>
+        <div class="event-stat-row">
+          <div class="event-stat-item blue"><strong id="ev-total">–</strong>Eventos</div>
+          <div class="event-stat-item green"><strong id="ev-rendido">–</strong>Rendido</div>
+          <div class="event-stat-item amber"><strong id="ev-pendiente">–</strong>Por rendir</div>
+        </div>
       </div>
     </div>
 
@@ -96,7 +124,7 @@ function badgeEstado(e){
 
 function badgeEv(e){
   if(e==='Activo') return '<span class="badge badge-green">Activo</span>';
-  if(e==='Próximo') return '<span class="badge badge-blue">Próximo</span>';
+  if(e==='Próximo'||e==='Proximo') return '<span class="badge badge-blue">Próximo</span>';
   return '<span class="badge badge-amber">Finalizado</span>';
 }
 
@@ -104,27 +132,43 @@ async function cargarDashboard(){
   try {
     var d = await API.get('/api/dashboard');
 
+    // Alumnos
     document.getElementById('m-alumnos').textContent = d.alumnos_activos;
     document.getElementById('m-alumnos-sub').textContent = 'Total en el padrón';
 
+    // Cuotas cobradas
     document.getElementById('m-cuotas').textContent = '$'+fmt(d.cuotas_cobradas_mes.total);
     document.getElementById('m-cuotas-sub').textContent = d.cuotas_cobradas_mes.cantidad+' pagos registrados';
 
+    // Pendientes
     document.getElementById('m-pendientes').textContent = d.pendientes.cantidad;
     document.getElementById('m-pendientes-sub').textContent = '$'+fmt(d.pendientes.suma)+' por cobrar';
 
+    // Stock
     document.getElementById('m-stock').textContent = d.stock.total;
     document.getElementById('m-stock-sub').textContent = d.stock.reservado+' prendas reservadas';
 
+    // Recaudación total
+    document.getElementById('m-recaudacion').textContent = '$'+fmt(d.recaudacion_total);
+
+    // Eventos stats
+    if(d.eventos_stats){
+      document.getElementById('ev-total').textContent = d.eventos_stats.total_eventos;
+      document.getElementById('ev-rendido').textContent = '$'+fmt(d.eventos_stats.total_rendido);
+      document.getElementById('ev-pendiente').textContent = '$'+fmt(d.eventos_stats.total_pendiente_rendicion);
+    }
+
+    // Últimos pagos
     document.getElementById('tbody-pagos').innerHTML = d.ultimos_pagos.length
       ? d.ultimos_pagos.map(p=>`<tr>
           <td><strong>${p.apellido}</strong>, ${p.nombre}</td>
-          <td>${p.concepto}${p.mes?' ('+p.mes+')',''||''}</td>
+          <td>${p.concepto}${p.mes?' ('+p.mes+')':''}</td>
           <td>$${fmt(p.monto)}</td>
           <td>${badgeEstado(p.estado)}</td>
         </tr>`).join('')
       : '<tr><td colspan="4" style="text-align:center;color:var(--text-3);padding:20px">Sin pagos aún</td></tr>';
 
+    // Reservas pendientes
     document.getElementById('tbody-reservas').innerHTML = d.reservas_pendientes.length
       ? d.reservas_pendientes.map(r=>`<tr>
           <td>${r.alumno_txt}</td>
@@ -133,6 +177,7 @@ async function cargarDashboard(){
         </tr>`).join('')
       : '<tr><td colspan="3" style="text-align:center;color:var(--text-3);padding:20px">Sin reservas</td></tr>';
 
+    // Eventos
     document.getElementById('eventos-row').innerHTML = d.eventos.map(ev=>`
       <div class="event-chip ${ev.estado==='Activo'?'event-active':'event-upcoming'}">
         <div class="event-chip-dot"></div>
@@ -141,8 +186,12 @@ async function cargarDashboard(){
           <div class="event-chip-date">${ev.fecha||'Sin fecha'} · ${badgeEv(ev.estado)}</div>
         </div>
       </div>`).join('');
+
   } catch(e) {
     showToast('Error cargando datos: '+e.message, 'error');
+    // Mostrar "--" en todos los valores si falla
+    ['m-alumnos','m-cuotas','m-pendientes','m-stock','m-recaudacion','ev-total','ev-rendido','ev-pendiente']
+      .forEach(id=>{ var el=document.getElementById(id); if(el) el.textContent='–'; });
   }
 }
 

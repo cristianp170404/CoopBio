@@ -17,36 +17,36 @@
     </header>
 
     <div class="page-content">
+      <!-- FILTROS GLOBALES -->
+      <div class="filter-bar" style="margin-bottom:12px">
+        <select id="filtro-concepto" onchange="onConceptoChange()" style="max-width:180px">
+          <option value="Cuota mensual">Cuota mensual</option>
+          <option value="Matricula">Matrícula</option>
+          <option value="Evento">Evento</option>
+          <option value="Otro">Otro</option>
+        </select>
+        <select id="filtro-mes" onchange="cargarTabla()" style="max-width:160px">
+          <option value="">Todos los meses</option>
+          <option>Marzo 2026</option><option>Abril 2026</option><option>Mayo 2026</option>
+          <option>Junio 2026</option><option>Julio 2026</option><option>Agosto 2026</option>
+          <option>Septiembre 2026</option><option>Octubre 2026</option><option>Noviembre 2026</option>
+        </select>
+        <input type="search" id="buscar-cuota" placeholder="Buscar alumno..." style="max-width:220px" oninput="filtrarLocal()">
+        <span id="resumen-filtro" style="font-size:12px;color:var(--text-3);margin-left:4px"></span>
+      </div>
+
+      <!-- TABS -->
       <div class="tabs">
-        <button class="tab active" onclick="cambiarTab('cuota',this)">Cuota mensual</button>
-        <button class="tab" onclick="cambiarTab('matricula',this)">Matrícula</button>
-        <button class="tab" onclick="cambiarTab('historial',this)">Historial</button>
+        <button class="tab active" onclick="cambiarTab('tabla',this)">Listado</button>
+        <button class="tab" onclick="cambiarTab('historial',this)">Historial de pagos</button>
       </div>
 
-      <!-- CUOTA -->
-      <div id="tab-cuota">
-        <div class="filter-bar">
-          <select id="mes-sel" onchange="cargarCuotas()" style="max-width:160px">
-            <option>Marzo 2026</option><option>Abril 2026</option><option>Mayo 2026</option>
-            <option>Junio 2026</option><option>Julio 2026</option><option>Agosto 2026</option>
-            <option>Septiembre 2026</option><option>Octubre 2026</option><option>Noviembre 2026</option>
-          </select>
-          <input type="search" id="buscar-cuota" placeholder="Buscar alumno..." style="max-width:220px" oninput="filtrarCuotas()">
-        </div>
+      <!-- TABLA PRINCIPAL -->
+      <div id="tab-tabla">
         <div class="card" style="margin:0;padding:0;overflow:hidden">
           <table class="table">
-            <thead><tr><th>Alumno</th><th>Año</th><th>Monto</th><th>Estado</th><th>Fecha pago</th><th>Acción</th></tr></thead>
+            <thead><tr><th>Alumno</th><th>Año</th><th>Concepto</th><th>Mes</th><th>Monto</th><th>Estado</th><th>Fecha pago</th><th>Acción</th></tr></thead>
             <tbody id="tbody-cuotas"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- MATRÍCULA -->
-      <div id="tab-matricula" style="display:none">
-        <div class="card" style="margin:0;padding:0;overflow:hidden">
-          <table class="table">
-            <thead><tr><th>Alumno</th><th>Año</th><th>Monto</th><th>Estado</th><th>Fecha</th><th>Acción</th></tr></thead>
-            <tbody id="tbody-matricula"></tbody>
           </table>
         </div>
       </div>
@@ -55,7 +55,7 @@
       <div id="tab-historial" style="display:none">
         <div class="card" style="margin:0;padding:0;overflow:hidden">
           <table class="table">
-            <thead><tr><th>Fecha</th><th>Alumno</th><th>Concepto</th><th>Monto</th><th>Forma pago</th><th>Comprobante</th></tr></thead>
+            <thead><tr><th>Fecha</th><th>Alumno</th><th>Concepto</th><th>Mes</th><th>Monto</th><th>Forma pago</th><th>Comprobante</th></tr></thead>
             <tbody id="tbody-historial"></tbody>
           </table>
         </div>
@@ -69,9 +69,7 @@
   <div class="modal">
     <div class="modal-title" id="cobro-titulo">Registrar pago</div>
     <div class="form-group"><label class="form-label">Alumno</label>
-      <select id="cobro-alumno-id">
-        <option value="">Seleccionar alumno...</option>
-      </select>
+      <select id="cobro-alumno-id"><option value="">Seleccionar alumno...</option></select>
     </div>
     <div class="form-group"><label class="form-label">Tel. tutor (WhatsApp)</label>
       <input type="tel" id="cobro-tel" placeholder="Se completa automáticamente">
@@ -80,15 +78,16 @@
       <div class="form-group"><label class="form-label">Concepto</label>
         <select id="cobro-concepto" onchange="actualizarMonto()">
           <option value="Cuota mensual" data-monto="3500">Cuota mensual</option>
-          <option value="Matrícula" data-monto="5000">Matrícula</option>
+          <option value="Matricula" data-monto="5000">Matrícula</option>
           <option value="Evento" data-monto="">Evento</option>
           <option value="Otro" data-monto="">Otro</option>
         </select>
       </div>
-      <div class="form-group"><label class="form-label">Mes (para cuota)</label>
+      <div class="form-group" id="grupo-mes"><label class="form-label">Mes</label>
         <select id="cobro-mes">
           <option>Marzo 2026</option><option>Abril 2026</option><option>Mayo 2026</option>
           <option>Junio 2026</option><option>Julio 2026</option><option>Agosto 2026</option>
+          <option>Septiembre 2026</option><option>Octubre 2026</option><option>Noviembre 2026</option>
         </select>
       </div>
     </div>
@@ -120,7 +119,6 @@
 <script src="/static/sidebar.js"></script>
 <script>
 var cuotasData = [];
-var historialData = [];
 var alumnosMap = {};
 
 function fmt(n){ return Number(n).toLocaleString('es-AR'); }
@@ -146,87 +144,89 @@ async function cargarAlumnos(){
   };
 }
 
-async function cargarCuotas(){
-  var mes = document.getElementById('mes-sel').value;
+function onConceptoChange(){
+  var c = document.getElementById('filtro-concepto').value;
+  // Para cuota mensual y evento mostrar filtro de mes, para matrícula no
+  var mesEl = document.getElementById('filtro-mes');
+  if(c === 'Matricula'){
+    mesEl.value = '';
+    mesEl.style.display = 'none';
+  } else {
+    mesEl.style.display = '';
+  }
+  cargarTabla();
+}
+
+async function cargarTabla(){
+  var concepto = document.getElementById('filtro-concepto').value;
+  var mes = document.getElementById('filtro-mes').value;
   try {
-    cuotasData = await API.get('/api/cuotas?concepto=Cuota+mensual&mes='+encodeURIComponent(mes));
-    filtrarCuotas();
+    var url = '/api/cuotas?concepto='+encodeURIComponent(concepto);
+    if(mes) url += '&mes='+encodeURIComponent(mes);
+    cuotasData = await API.get(url);
+    filtrarLocal();
   } catch(e){ showToast(e.message,'error'); }
 }
 
-function filtrarCuotas(){
+function filtrarLocal(){
   var q = document.getElementById('buscar-cuota').value.toLowerCase();
   var data = cuotasData.filter(c=>(c.apellido+' '+c.nombre).toLowerCase().includes(q));
-  renderCuotas(data);
+  renderTabla(data);
 }
 
-function renderCuotas(data){
+function renderTabla(data){
+  var pagados = data.filter(c=>c.estado==='Pagado');
+  var total = data.reduce((s,c)=>s+(c.estado==='Pagado'?c.monto:0),0);
+  document.getElementById('resumen-filtro').textContent =
+    data.length+' registros · '+pagados.length+' pagados · $'+fmt(total)+' cobrado';
+
   document.getElementById('tbody-cuotas').innerHTML = data.length
     ? data.map(c=>`<tr>
         <td><strong>${c.apellido}</strong>, ${c.nombre}</td>
         <td>${c.anio}</td>
+        <td>${c.concepto}</td>
+        <td>${c.mes||'–'}</td>
         <td>$${fmt(c.monto)}</td>
         <td>${badge(c.estado)}</td>
         <td>${c.fecha_pago||'–'}</td>
         <td>${c.estado==='Pagado'
           ? `<button class="btn btn-sm btn-wa" onclick="enviarWA('${c.apellido}, ${c.nombre}','${c.tel_tutor}','${c.concepto}',${c.monto})">&#128234; WA</button>`
-          : `<button class="btn btn-sm btn-primary" onclick="cobrarDirecto(${c.alumno_id},'${c.apellido}, ${c.nombre}','Cuota mensual',${c.monto},'${c.tel_tutor}','${c.mes}')">Cobrar</button>`
+          : `<button class="btn btn-sm btn-primary" onclick="cobrarDirecto(${c.alumno_id},'${c.apellido}, ${c.nombre}','${c.concepto}',${c.monto},'${c.tel_tutor}','${c.mes||''}')">Cobrar</button>`
         }</td>
       </tr>`).join('')
-    : '<tr><td colspan="6" style="text-align:center;color:var(--text-3);padding:32px">Sin resultados para este mes</td></tr>';
-}
-
-async function cargarMatricula(){
-  try {
-    var data = await API.get('/api/cuotas?concepto=Matrícula');
-    document.getElementById('tbody-matricula').innerHTML = data.length
-      ? data.map(c=>`<tr>
-          <td><strong>${c.apellido}</strong>, ${c.nombre}</td>
-          <td>${c.anio}</td><td>$${fmt(c.monto)}</td>
-          <td>${badge(c.estado)}</td>
-          <td>${c.fecha_pago||'–'}</td>
-          <td>${c.estado==='Pagado'
-            ? `<button class="btn btn-sm btn-wa" onclick="enviarWA('${c.apellido}, ${c.nombre}','${c.tel_tutor}','Matrícula',${c.monto})">&#128234; WA</button>`
-            : `<button class="btn btn-sm btn-primary" onclick="cobrarDirecto(${c.alumno_id},'${c.apellido}, ${c.nombre}','Matrícula',${c.monto},'${c.tel_tutor}',null)">Cobrar</button>`
-          }</td>
-        </tr>`).join('')
-      : '<tr><td colspan="6" style="text-align:center;color:var(--text-3);padding:32px">Sin datos de matrícula</td></tr>';
-  } catch(e){ showToast(e.message,'error'); }
+    : '<tr><td colspan="8" style="text-align:center;color:var(--text-3);padding:32px">Sin resultados</td></tr>';
 }
 
 async function cargarHistorial(){
   try {
-    historialData = await API.get('/api/cuotas/historial');
-    document.getElementById('tbody-historial').innerHTML = historialData.length
-      ? historialData.map(h=>`<tr>
+    var data = await API.get('/api/cuotas/historial');
+    document.getElementById('tbody-historial').innerHTML = data.length
+      ? data.map(h=>`<tr>
           <td>${h.fecha_pago||'–'}</td>
           <td>${h.apellido}, ${h.nombre}</td>
-          <td>${h.concepto}${h.mes?' ('+h.mes+')':''}</td>
+          <td>${h.concepto}</td>
+          <td>${h.mes||'–'}</td>
           <td>$${fmt(h.monto)}</td><td>${h.forma_pago}</td>
           <td><button class="btn btn-sm btn-wa" onclick="enviarWA('${h.apellido}, ${h.nombre}','${h.tel_tutor}','${h.concepto}',${h.monto})">&#128234; Reenviar</button></td>
         </tr>`).join('')
-      : '<tr><td colspan="6" style="text-align:center;color:var(--text-3);padding:32px">Sin historial</td></tr>';
+      : '<tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:32px">Sin historial</td></tr>';
   } catch(e){ showToast(e.message,'error'); }
 }
 
 function cambiarTab(t, el){
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   el.classList.add('active');
-  document.getElementById('tab-cuota').style.display = t==='cuota'?'':'none';
-  document.getElementById('tab-matricula').style.display = t==='matricula'?'':'none';
+  document.getElementById('tab-tabla').style.display = t==='tabla'?'':'none';
   document.getElementById('tab-historial').style.display = t==='historial'?'':'none';
-  if(t==='matricula') cargarMatricula();
   if(t==='historial') cargarHistorial();
 }
 
-var mesActualModal = null;
 function abrirModal(){
   document.getElementById('cobro-titulo').textContent='Registrar pago';
   document.getElementById('cobro-alumno-id').value='';
   document.getElementById('cobro-tel').value='';
   document.getElementById('cobro-monto').value=3500;
   document.getElementById('cobro-obs').value='';
-  mesActualModal = null;
   document.getElementById('modal-cobro').classList.add('open');
   actualizarPreview();
 }
@@ -237,7 +237,6 @@ function cobrarDirecto(alumnoId, alumnoNombre, concepto, monto, tel, mes){
   document.getElementById('cobro-tel').value=tel;
   document.getElementById('cobro-concepto').value=concepto;
   document.getElementById('cobro-monto').value=monto;
-  mesActualModal = mes;
   if(mes) document.getElementById('cobro-mes').value=mes;
   document.getElementById('modal-cobro').classList.add('open');
   actualizarPreview();
@@ -247,6 +246,8 @@ function actualizarMonto(){
   var sel = document.getElementById('cobro-concepto');
   var m = sel.options[sel.selectedIndex].dataset.monto;
   if(m) document.getElementById('cobro-monto').value=m;
+  var mostrarMes = sel.value !== 'Matricula';
+  document.getElementById('grupo-mes').style.display = mostrarMes ? '' : 'none';
   actualizarPreview();
 }
 
@@ -268,13 +269,12 @@ async function confirmarCobro(){
   var monto = document.getElementById('cobro-monto').value;
   var forma = document.getElementById('cobro-forma').value;
   var obs = document.getElementById('cobro-obs').value;
-  var mes = concepto==='Cuota mensual' ? document.getElementById('cobro-mes').value : null;
+  var mes = concepto==='Cuota mensual' || concepto==='Evento' ? document.getElementById('cobro-mes').value : null;
   var wa = document.getElementById('check-wa').checked;
   if(!alumnoId||!monto){ showToast('Completá alumno y monto','error'); return; }
   try {
     await API.post('/api/cuotas', {alumno_id:parseInt(alumnoId), concepto, mes, monto:parseFloat(monto), forma_pago:forma, obs});
-    cerrarModal();
-    cargarCuotas();
+    cerrarModal(); cargarTabla();
     if(wa && tel){
       var sel = document.getElementById('cobro-alumno-id');
       var alumno = sel.options[sel.selectedIndex]?.text||'';
@@ -294,7 +294,7 @@ document.getElementById('cobro-forma').addEventListener('change', actualizarPrev
 
 async function init(){
   await cargarAlumnos();
-  cargarCuotas();
+  cargarTabla();
 }
 init();
 </script>

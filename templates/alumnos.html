@@ -7,6 +7,19 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/css/main.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+.import-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:24px;text-align:center;cursor:pointer;transition:.2s;background:var(--surface-2)}
+.import-zone:hover,.import-zone.drag-over{border-color:var(--blue);background:rgba(99,102,241,.05)}
+.import-zone p{margin:6px 0;font-size:13px;color:var(--text-3)}
+.import-zone strong{color:var(--text)}
+.import-preview{margin-top:14px;max-height:260px;overflow:auto}
+.import-preview table{width:100%}
+.import-errors{margin-top:10px;font-size:12px;color:var(--red)}
+.import-errors li{margin:2px 0}
+.template-hint{font-size:11px;color:var(--text-3);margin-top:8px}
+.template-hint code{background:var(--surface-2);padding:1px 5px;border-radius:4px;font-size:11px}
+</style>
 </head>
 <body>
 <div class="layout">
@@ -17,6 +30,7 @@
         <p class="page-subtitle">Gestión del padrón escolar</p>
       </div>
       <div class="topbar-actions">
+        <button class="btn" onclick="abrirImportar()">&#8593; Importar Excel</button>
         <button class="btn btn-primary" onclick="abrirModal()">+ Nuevo alumno</button>
       </div>
     </header>
@@ -26,8 +40,8 @@
         <input type="search" id="buscar" placeholder="Buscar por nombre, apellido o DNI..." oninput="filtrar()">
         <select id="filtro-anio" onchange="filtrar()" style="max-width:150px">
           <option value="">Todos los años</option>
-          <option>1° año</option><option>2° año</option><option>3° año</option>
-          <option>4° año</option><option>5° año</option><option>6° año</option>
+          <option>1 anio</option><option>2 anio</option><option>3 anio</option>
+          <option>4 anio</option><option>5 anio</option><option>6 anio</option>
         </select>
         <span id="contador" style="font-size:12px;color:var(--text-3);margin-left:4px"></span>
       </div>
@@ -36,11 +50,12 @@
         <table class="table" id="tabla-alumnos">
           <thead>
             <tr>
+              <th style="width:60px">ID</th>
               <th>Apellido y nombre</th><th>DNI</th><th>Año</th>
               <th>Tel. alumno</th><th>Tel. tutor (WhatsApp)</th><th>Estado</th><th style="width:80px"></th>
             </tr>
           </thead>
-          <tbody id="tbody"><tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:32px">Cargando...</td></tr></tbody>
+          <tbody id="tbody"><tr><td colspan="8" style="text-align:center;color:var(--text-3);padding:32px">Cargando...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -57,11 +72,11 @@
       <div class="form-group"><label class="form-label">Nombre *</label><input type="text" id="f-nombre" placeholder="Nombre"></div>
     </div>
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">DNI *</label><input type="text" id="f-dni" placeholder="12345678"></div>
+      <div class="form-group"><label class="form-label">DNI</label><input type="text" id="f-dni" placeholder="12345678 (opcional)"></div>
       <div class="form-group"><label class="form-label">Año *</label>
         <select id="f-anio"><option value="">Seleccionar...</option>
-          <option>1° año</option><option>2° año</option><option>3° año</option>
-          <option>4° año</option><option>5° año</option><option>6° año</option></select>
+          <option>1 anio</option><option>2 anio</option><option>3 anio</option>
+          <option>4 anio</option><option>5 anio</option><option>6 anio</option></select>
       </div>
     </div>
     <div class="form-grid">
@@ -75,11 +90,40 @@
   </div>
 </div>
 
+<!-- MODAL IMPORTAR EXCEL -->
+<div class="modal-overlay" id="modal-importar">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-title">Importar alumnos desde Excel</div>
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:12px">
+      El archivo debe tener las siguientes columnas (la primera fila es el encabezado):
+    </p>
+    <div class="template-hint" style="margin-bottom:14px">
+      Columnas requeridas: <code>apellido</code> <code>nombre</code> <code>anio</code> <code>tel_tutor</code><br>
+      Columnas opcionales: <code>dni</code> <code>tel_alumno</code>
+    </div>
+    <div class="import-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div style="font-size:32px;margin-bottom:8px">📂</div>
+      <strong>Hacer clic o arrastrar el archivo Excel aquí</strong>
+      <p>Formatos aceptados: .xlsx, .xls, .csv</p>
+      <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="procesarArchivo(this.files[0])">
+    </div>
+    <div id="import-preview" class="import-preview" style="display:none"></div>
+    <div id="import-errors" class="import-errors" style="display:none"></div>
+    <div id="import-info" style="font-size:13px;margin-top:10px;color:var(--text-3)"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="cerrar('modal-importar')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-confirmar-import" style="display:none" onclick="confirmarImportar()">Importar alumnos</button>
+      <a id="btn-descargar-template" href="#" download="plantilla_alumnos.xlsx" onclick="descargarPlantilla(event)" class="btn" style="margin-right:auto">⬇ Descargar plantilla</a>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 <script src="/static/api.js"></script>
 <script src="/static/sidebar.js"></script>
 <script>
 var todosAlumnos = [];
+var importData = [];
 
 async function cargar(){
   try {
@@ -92,7 +136,7 @@ function filtrar(){
   var q = document.getElementById('buscar').value.toLowerCase();
   var anio = document.getElementById('filtro-anio').value;
   var data = todosAlumnos.filter(a =>
-    (a.apellido+' '+a.nombre+' '+a.dni).toLowerCase().includes(q) &&
+    (a.apellido+' '+a.nombre+' '+(a.dni||'')).toLowerCase().includes(q) &&
     (!anio || a.anio === anio)
   );
   render(data);
@@ -102,12 +146,13 @@ function render(data){
   var tb = document.getElementById('tbody');
   document.getElementById('contador').textContent = data.length+' alumno'+(data.length!==1?'s':'');
   if(!data.length){
-    tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:32px">Sin resultados</td></tr>';
+    tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--text-3);padding:32px">Sin resultados</td></tr>';
     return;
   }
   tb.innerHTML = data.map(a=>`<tr>
+    <td style="font-size:11px;color:var(--text-3);font-weight:600">#${a.id}</td>
     <td><strong>${a.apellido}</strong>, ${a.nombre}</td>
-    <td>${a.dni}</td><td>${a.anio}</td>
+    <td>${a.dni||'–'}</td><td>${a.anio}</td>
     <td>${a.tel_alumno||'–'}</td>
     <td><a href="https://wa.me/549${(a.tel_tutor||'').replace(/\D/g,'')}" target="_blank"
        class="btn btn-sm btn-wa" style="font-size:11px">&#128234; ${a.tel_tutor}</a></td>
@@ -131,7 +176,7 @@ function editarAlumno(id){
   document.getElementById('f-id').value=id;
   document.getElementById('f-apellido').value=a.apellido;
   document.getElementById('f-nombre').value=a.nombre;
-  document.getElementById('f-dni').value=a.dni;
+  document.getElementById('f-dni').value=a.dni||'';
   document.getElementById('f-anio').value=a.anio;
   document.getElementById('f-tel-alumno').value=a.tel_alumno||'';
   document.getElementById('f-tel-tutor').value=a.tel_tutor;
@@ -139,6 +184,7 @@ function editarAlumno(id){
 }
 
 function cerrarModal(){ document.getElementById('modal').classList.remove('open'); }
+function cerrar(id){ document.getElementById(id).classList.remove('open'); }
 
 async function guardar(){
   var id = document.getElementById('f-id').value;
@@ -150,18 +196,122 @@ async function guardar(){
     tel_alumno: document.getElementById('f-tel-alumno').value.trim(),
     tel_tutor:  document.getElementById('f-tel-tutor').value.trim(),
   };
-  if(!body.apellido||!body.nombre||!body.dni||!body.anio||!body.tel_tutor){
+  if(!body.apellido||!body.nombre||!body.anio||!body.tel_tutor){
     showToast('Completá los campos obligatorios','error'); return;
   }
   try {
     if(id){ await API.put('/api/alumnos/'+id, body); showToast('Alumno actualizado'); }
     else   { await API.post('/api/alumnos', body);   showToast('Alumno guardado'); }
-    cerrarModal();
-    cargar();
+    cerrarModal(); cargar();
   } catch(e){ showToast(e.message,'error'); }
 }
 
+// ── Importar Excel ──────────────────────────────────────────────────────────
+
+function abrirImportar(){
+  importData = [];
+  document.getElementById('import-preview').style.display='none';
+  document.getElementById('import-errors').style.display='none';
+  document.getElementById('import-info').textContent='';
+  document.getElementById('btn-confirmar-import').style.display='none';
+  document.getElementById('file-input').value='';
+  document.getElementById('modal-importar').classList.add('open');
+}
+
+var dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover',function(e){ e.preventDefault(); this.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave',function(){ this.classList.remove('drag-over'); });
+dropZone.addEventListener('drop',function(e){ e.preventDefault(); this.classList.remove('drag-over'); if(e.dataTransfer.files[0]) procesarArchivo(e.dataTransfer.files[0]); });
+
+function procesarArchivo(file){
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try {
+      var wb = XLSX.read(e.target.result, {type:'binary'});
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var json = XLSX.utils.sheet_to_json(ws, {defval:''});
+      if(!json.length){ showToast('El archivo está vacío','error'); return; }
+
+      // Normalizar columnas (case-insensitive)
+      var normalized = json.map(function(row){
+        var obj = {};
+        Object.keys(row).forEach(function(k){ obj[k.toLowerCase().trim().replace(/\s+/g,'_')] = row[k]; });
+        return {
+          apellido: String(obj.apellido||'').trim(),
+          nombre:   String(obj.nombre||'').trim(),
+          dni:      String(obj.dni||'').trim(),
+          anio:     String(obj.anio||obj['año']||obj['anio']||'').trim(),
+          tel_alumno: String(obj.tel_alumno||obj['telefono_alumno']||'').trim(),
+          tel_tutor:  String(obj.tel_tutor||obj['telefono_tutor']||obj['tel_padre']||'').trim(),
+        };
+      });
+
+      importData = normalized;
+      mostrarPreview(normalized);
+    } catch(e){ showToast('Error leyendo el archivo: '+e.message,'error'); }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function mostrarPreview(data){
+  var validos = data.filter(function(a){ return a.apellido && a.nombre && a.anio && a.tel_tutor; });
+  var invalidos = data.filter(function(a){ return !a.apellido || !a.nombre || !a.anio || !a.tel_tutor; });
+
+  var html = '<table class="table"><thead><tr><th>Apellido</th><th>Nombre</th><th>DNI</th><th>Año</th><th>Tel. alumno</th><th>Tel. tutor</th><th></th></tr></thead><tbody>';
+  data.forEach(function(a, i){
+    var ok = a.apellido && a.nombre && a.anio && a.tel_tutor;
+    html += '<tr style="'+(ok?'':'background:rgba(239,68,68,.06)')+'">'+
+      '<td>'+a.apellido+'</td><td>'+a.nombre+'</td><td>'+a.dni+'</td><td>'+a.anio+'</td>'+
+      '<td>'+a.tel_alumno+'</td><td>'+a.tel_tutor+'</td>'+
+      '<td>'+(ok?'<span class="badge badge-green">OK</span>':'<span class="badge badge-red">Incompleto</span>')+'</td></tr>';
+  });
+  html += '</tbody></table>';
+
+  document.getElementById('import-preview').innerHTML = html;
+  document.getElementById('import-preview').style.display = '';
+  document.getElementById('import-info').textContent = data.length+' filas detectadas · '+validos.length+' válidas · '+(invalidos.length ? invalidos.length+' con errores' : '');
+
+  if(invalidos.length){
+    document.getElementById('import-errors').innerHTML = '<strong>Filas con errores (se omitirán):</strong><ul>'+
+      invalidos.map(function(a,i){ return '<li>Fila '+(i+2)+': '+(a.apellido||'(sin apellido)')+', '+(a.nombre||'(sin nombre)')+' — falta: '+[!a.apellido?'apellido':'',!a.nombre?'nombre':'',!a.anio?'año':'',!a.tel_tutor?'tel_tutor':''].filter(Boolean).join(', ')+'</li>'; }).join('');+'</ul>';
+    document.getElementById('import-errors').style.display = '';
+  } else {
+    document.getElementById('import-errors').style.display='none';
+  }
+
+  document.getElementById('btn-confirmar-import').style.display = validos.length ? '' : 'none';
+}
+
+async function confirmarImportar(){
+  if(!importData.length){ showToast('No hay datos para importar','error'); return; }
+  var btn = document.getElementById('btn-confirmar-import');
+  btn.disabled = true; btn.textContent = 'Importando...';
+  try {
+    var res = await API.post('/api/alumnos/importar', {alumnos: importData});
+    var msg = res.insertados+' alumno'+(res.insertados!==1?'s':'')+' importado'+(res.insertados!==1?'s':'');
+    if(res.errores && res.errores.length) msg += ' · '+res.errores.length+' con errores';
+    showToast(msg);
+    cerrar('modal-importar');
+    cargar();
+  } catch(e){ showToast(e.message,'error'); }
+  finally { btn.disabled=false; btn.textContent='Importar alumnos'; }
+}
+
+function descargarPlantilla(e){
+  e.preventDefault();
+  var ws = XLSX.utils.aoa_to_sheet([
+    ['apellido','nombre','dni','anio','tel_alumno','tel_tutor'],
+    ['Garcia','Lucia','38123456','3 anio','11 1234-5678','11 8765-4321'],
+    ['Perez','Tomas','39456789','5 anio','','11 7654-3210'],
+  ]);
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Alumnos');
+  XLSX.writeFile(wb, 'plantilla_alumnos.xlsx');
+}
+
 document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)cerrarModal();});
+document.getElementById('modal-importar').addEventListener('click',function(e){if(e.target===this)cerrar('modal-importar');});
 cargar();
 </script>
 </body>

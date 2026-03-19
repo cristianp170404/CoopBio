@@ -13,9 +13,20 @@
 .evento-nombre{font-family:'Syne',sans-serif;font-weight:700;font-size:16px}
 .evento-desc{font-size:12px;color:var(--text-3);margin-top:2px}
 .evento-actions{display:flex;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
-.evento-stats{display:flex;gap:16px;margin-bottom:10px}
+.evento-stats{display:flex;gap:16px;margin-bottom:10px;flex-wrap:wrap}
 .evento-stat{font-size:12px;color:var(--text-3)}
 .evento-stat strong{color:var(--text);font-size:14px;display:block}
+.bono-rango{display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:12px;margin-bottom:10px}
+.bono-rango span{color:var(--text-3)}
+.bono-rango strong{color:var(--text)}
+/* Reporte modal */
+.reporte-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:14px 0}
+.reporte-stat{background:var(--surface-2);border-radius:8px;padding:14px;text-align:center}
+.reporte-stat .val{font-size:22px;font-weight:700;font-family:'Syne',sans-serif}
+.reporte-stat .lbl{font-size:11px;color:var(--text-3);margin-top:2px}
+.reporte-stat.green .val{color:var(--green)}
+.reporte-stat.amber .val{color:var(--amber)}
+.reporte-stat.blue .val{color:var(--blue)}
 </style>
 </head>
 <body>
@@ -43,6 +54,10 @@
       </div>
     </div>
     <div class="form-group"><label class="form-label">Descripción</label><input type="text" id="ev-desc" placeholder="Detalle del evento"></div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Bonos: Nro. desde</label><input type="number" id="ev-bono-desde" placeholder="Ej: 1" min="1"></div>
+      <div class="form-group"><label class="form-label">Bonos: Nro. hasta</label><input type="number" id="ev-bono-hasta" placeholder="Ej: 200" min="1"></div>
+    </div>
     <div class="modal-footer">
       <button class="btn" onclick="cerrar('modal-evento')">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarEvento()">Crear evento</button>
@@ -60,10 +75,13 @@
     <div class="form-group"><label class="form-label">Tel. tutor (WhatsApp)</label><input type="tel" id="cev-tel" placeholder="11 1234-5678"></div>
     <div class="form-grid">
       <div class="form-group"><label class="form-label">Detalle</label><input type="text" id="cev-det" placeholder="Ej: 2 porciones" oninput="previewEv()"></div>
-      <div class="form-group"><label class="form-label">Monto ($)</label><input type="number" id="cev-monto" placeholder="0" oninput="previewEv()"></div>
+      <div class="form-group"><label class="form-label">Nro. de bono</label><input type="number" id="cev-bono" placeholder="Ej: 42" min="1"></div>
     </div>
-    <div class="form-group"><label class="form-label">Forma de pago</label>
-      <select id="cev-forma" onchange="previewEv()"><option>Efectivo</option><option>Débito</option><option>Transferencia</option></select>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Monto ($)</label><input type="number" id="cev-monto" placeholder="0" oninput="previewEv()"></div>
+      <div class="form-group"><label class="form-label">Forma de pago</label>
+        <select id="cev-forma" onchange="previewEv()"><option>Efectivo</option><option>Débito</option><option>Transferencia</option></select>
+      </div>
     </div>
     <div class="form-group" style="margin-bottom:4px">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
@@ -74,6 +92,17 @@
     <div class="modal-footer">
       <button class="btn" onclick="cerrar('modal-cobro-ev')">Cancelar</button>
       <button class="btn btn-wa" onclick="confirmarCobroEv()">&#128234; Confirmar cobro</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL REPORTE -->
+<div class="modal-overlay" id="modal-reporte">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-title" id="reporte-titulo">Reporte del evento</div>
+    <div id="reporte-body"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="cerrar('modal-reporte')">Cerrar</button>
     </div>
   </div>
 </div>
@@ -89,7 +118,7 @@ function fmt(n){ return Number(n).toLocaleString('es-AR'); }
 
 function badgeEstado(e){
   if(e==='Activo') return '<span class="badge badge-green">Activo</span>';
-  if(e==='Próximo') return '<span class="badge badge-blue">Próximo</span>';
+  if(e==='Próximo'||e==='Proximo') return '<span class="badge badge-blue">Próximo</span>';
   return '<span class="badge badge-amber">Finalizado</span>';
 }
 function badgePago(e){
@@ -125,17 +154,33 @@ function render(eventos){
   }
   document.getElementById('lista-eventos').innerHTML = eventos.map(ev=>{
     var total = ev.participantes.reduce((s,p)=>s+p.monto,0);
-    var cobrado = ev.participantes.filter(p=>p.estado==='Pagado').reduce((s,p)=>s+p.monto,0);
+    var rendidos = ev.participantes.filter(p=>p.rendido);
+    var pendientes = ev.participantes.filter(p=>!p.rendido);
+    var montoRendido = rendidos.reduce((s,p)=>s+p.monto,0);
+    var montoPendiente = pendientes.reduce((s,p)=>s+p.monto,0);
+
+    var bonoHtml = (ev.bono_desde && ev.bono_hasta)
+      ? `<div class="bono-rango">🎟️ <span>Bonos:</span> <strong>${ev.bono_desde} al ${ev.bono_hasta}</strong> <span>(${ev.bono_hasta - ev.bono_desde + 1} emitidos)</span></div>`
+      : '';
+
     var rows = ev.participantes.map(p=>`<tr>
       <td>${p.alumno_txt||(p.apellido?p.apellido+', '+p.nombre:'–')}</td>
       <td>${p.detalle||'–'}</td>
+      <td style="text-align:center;font-size:12px;color:var(--text-3)">${p.bono_numero||'–'}</td>
       <td>$${fmt(p.monto)}</td>
       <td>${badgePago(p.estado)}</td>
-      <td>${p.estado==='Pagado'
-        ?`<button class="btn btn-sm btn-wa" onclick="enviarWA('${p.alumno_txt||''}','${p.tel_tutor||''}','${ev.nombre}',${p.monto})">&#128234; WA</button>`
-        :`<button class="btn btn-sm btn-primary" onclick="abrirCobroEv(${ev.id},'${p.alumno_txt||''}','${p.tel_tutor||''}',${p.monto})">Cobrar</button>`
+      <td style="text-align:center">
+        <label style="display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer">
+          <input type="checkbox" ${p.rendido?'checked':''} onchange="toggleRendicion(${ev.id},${p.id},this.checked)" style="width:auto;accent-color:var(--green)">
+          <span style="font-size:11px">${p.rendido?'Rendido':'Pendiente'}</span>
+        </label>
+      </td>
+      <td>${p.rendido
+        ? `<button class="btn btn-sm btn-wa" onclick="enviarWA('${p.alumno_txt||''}','${p.tel_tutor||''}','${ev.nombre}',${p.monto})">&#128234; WA</button>`
+        : `<button class="btn btn-sm btn-primary" onclick="abrirCobroEv(${ev.id},'${p.alumno_txt||''}','${p.tel_tutor||''}',${p.monto})">Cobrar</button>`
       }</td>
     </tr>`).join('');
+
     return `<div class="evento-card">
       <div class="evento-header">
         <div>
@@ -144,17 +189,69 @@ function render(eventos){
         </div>
         ${badgeEstado(ev.estado)}
       </div>
+      ${bonoHtml}
       <div class="evento-stats">
-        <div class="evento-stat"><strong>$${fmt(total)}</strong>Total</div>
-        <div class="evento-stat"><strong>$${fmt(cobrado)}</strong>Cobrado</div>
-        <div class="evento-stat"><strong>${ev.participantes.length}</strong>Participantes</div>
+        <div class="evento-stat"><strong>$${fmt(total)}</strong>Total cobrado</div>
+        <div class="evento-stat"><strong style="color:var(--green)">$${fmt(montoRendido)}</strong>Rendido (${rendidos.length})</div>
+        <div class="evento-stat"><strong style="color:var(--amber)">$${fmt(montoPendiente)}</strong>Por rendir (${pendientes.length})</div>
+        <div class="evento-stat"><strong>${ev.participantes.length}</strong>Cobros</div>
       </div>
-      ${ev.participantes.length?`<table class="table"><thead><tr><th>Alumno</th><th>Detalle</th><th>Monto</th><th>Estado</th><th>Comprobante</th></tr></thead><tbody>${rows}</tbody></table>`:'<p style="font-size:13px;color:var(--text-3)">Sin participantes aún.</p>'}
+      ${ev.participantes.length
+        ? `<table class="table"><thead><tr><th>Alumno</th><th>Detalle</th><th style="text-align:center">Bono Nro.</th><th>Monto</th><th>Estado pago</th><th style="text-align:center">Rendición</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
+        : '<p style="font-size:13px;color:var(--text-3)">Sin cobros registrados.</p>'}
       <div class="evento-actions">
         <button class="btn btn-sm btn-primary" onclick="abrirCobroEv(${ev.id},'','',0)">+ Registrar cobro</button>
+        <button class="btn btn-sm" onclick="verReporte(${ev.id})">📊 Reporte</button>
       </div>
     </div>`;
   }).join('');
+}
+
+async function toggleRendicion(evId, cobroId, rendido){
+  try {
+    await API.patch('/api/eventos/'+evId+'/cobros/'+cobroId+'/rendir', {rendido});
+    showToast(rendido ? 'Bono marcado como rendido' : 'Bono desmarcado');
+    cargarEventos();
+  } catch(e){ showToast(e.message,'error'); }
+}
+
+async function verReporte(evId){
+  try {
+    var r = await API.get('/api/eventos/'+evId+'/reporte');
+    document.getElementById('reporte-titulo').textContent = 'Reporte: '+r.evento.nombre;
+    var html = '';
+    if(r.rango_bonos){
+      html += `<div class="bono-rango" style="margin-bottom:14px">🎟️ Bonos emitidos: <strong>${r.rango_bonos}</strong> (${r.total_emitidos} total)</div>`;
+    }
+    html += `<div class="reporte-grid">
+      <div class="reporte-stat blue"><div class="val">${r.total_cobros}</div><div class="lbl">Cobros registrados</div></div>
+      <div class="reporte-stat green"><div class="val">${r.rendidos.cantidad}</div><div class="lbl">Rendidos · $${fmt(r.rendidos.monto)}</div></div>
+      <div class="reporte-stat amber"><div class="val">${r.pendientes.cantidad}</div><div class="lbl">Pendientes · $${fmt(r.pendientes.monto)}</div></div>
+    </div>
+    <div style="margin-bottom:10px;font-size:13px;color:var(--text-2)">
+      <strong>Total recaudado: $${fmt(r.monto_total)}</strong>
+    </div>`;
+
+    if(r.pendientes.detalle.length){
+      html += '<div style="font-size:13px;font-weight:600;margin-bottom:6px;color:var(--amber)">⏳ Pendientes de rendición</div>';
+      html += '<table class="table" style="margin-bottom:14px"><thead><tr><th>Alumno</th><th>Detalle</th><th>Bono</th><th>Monto</th></tr></thead><tbody>';
+      r.pendientes.detalle.forEach(function(p){
+        html += '<tr><td>'+(p.alumno_txt||'–')+'</td><td>'+(p.detalle||'–')+'</td><td>'+(p.bono_numero||'–')+'</td><td>$'+fmt(p.monto)+'</td></tr>';
+      });
+      html += '</tbody></table>';
+    }
+    if(r.rendidos.detalle.length){
+      html += '<div style="font-size:13px;font-weight:600;margin-bottom:6px;color:var(--green)">✅ Rendidos</div>';
+      html += '<table class="table"><thead><tr><th>Alumno</th><th>Detalle</th><th>Bono</th><th>Monto</th><th>Fecha rendición</th></tr></thead><tbody>';
+      r.rendidos.detalle.forEach(function(p){
+        html += '<tr><td>'+(p.alumno_txt||'–')+'</td><td>'+(p.detalle||'–')+'</td><td>'+(p.bono_numero||'–')+'</td><td>$'+fmt(p.monto)+'</td><td>'+(p.fecha_rendicion||'–')+'</td></tr>';
+      });
+      html += '</tbody></table>';
+    }
+
+    document.getElementById('reporte-body').innerHTML = html;
+    document.getElementById('modal-reporte').classList.add('open');
+  } catch(e){ showToast(e.message,'error'); }
 }
 
 function abrirModalEvento(){ document.getElementById('modal-evento').classList.add('open'); }
@@ -167,7 +264,9 @@ async function guardarEvento(){
     await API.post('/api/eventos', {
       nombre:nm, fecha:document.getElementById('ev-fecha').value,
       tipo:document.getElementById('ev-tipo').value,
-      descripcion:document.getElementById('ev-desc').value
+      descripcion:document.getElementById('ev-desc').value,
+      bono_desde: document.getElementById('ev-bono-desde').value || null,
+      bono_hasta: document.getElementById('ev-bono-hasta').value || null,
     });
     cerrar('modal-evento');
     cargarEventos();
@@ -182,6 +281,7 @@ function abrirCobroEv(evId, alumnoTxt, tel, monto){
   document.getElementById('cev-tel').value=tel||'';
   document.getElementById('cev-monto').value=monto||'';
   document.getElementById('cev-det').value='';
+  document.getElementById('cev-bono').value='';
   document.getElementById('modal-cobro-ev').classList.add('open');
   previewEv();
 }
@@ -204,6 +304,7 @@ async function confirmarCobroEv(){
   var monto=parseInt(document.getElementById('cev-monto').value)||0;
   var det=document.getElementById('cev-det').value;
   var forma=document.getElementById('cev-forma').value;
+  var bono=document.getElementById('cev-bono').value;
   var wa=document.getElementById('cev-wa').checked;
   var sel=document.getElementById('cev-alumno-id');
   var alumnoTxt=sel.options[sel.selectedIndex]?.text||'';
@@ -211,7 +312,8 @@ async function confirmarCobroEv(){
   try {
     await API.post('/api/eventos/'+eventoActivo+'/cobros',{
       alumno_id:alumnoId?parseInt(alumnoId):null,
-      alumno_txt:alumnoTxt, tel_tutor:tel, detalle:det, monto, forma_pago:forma
+      alumno_txt:alumnoTxt, tel_tutor:tel, detalle:det, monto, forma_pago:forma,
+      bono_numero: bono ? parseInt(bono) : null,
     });
     cerrar('modal-cobro-ev');
     cargarEventos();

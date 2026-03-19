@@ -44,8 +44,7 @@ def init_db():
     CREATE TABLE IF NOT EXISTS alumnos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         apellido TEXT NOT NULL, nombre TEXT NOT NULL,
-        dni TEXT DEFAULT '',
-        anio TEXT NOT NULL,
+        dni TEXT DEFAULT '', anio TEXT NOT NULL,
         tel_alumno TEXT DEFAULT '', tel_tutor TEXT NOT NULL,
         activo INTEGER DEFAULT 1,
         creado_en TEXT DEFAULT (datetime('now','localtime'))
@@ -63,21 +62,34 @@ def init_db():
         nombre TEXT NOT NULL, fecha TEXT,
         tipo TEXT DEFAULT 'Otro', descripcion TEXT DEFAULT '',
         estado TEXT DEFAULT 'Proximo',
-        bono_desde INTEGER DEFAULT NULL,
-        bono_hasta INTEGER DEFAULT NULL,
+        precio_tarjeta REAL DEFAULT 0,
+        ganancia_tarjeta REAL DEFAULT 0,
         creado_en TEXT DEFAULT (datetime('now','localtime'))
     );
-    CREATE TABLE IF NOT EXISTS evento_cobros (
+    CREATE TABLE IF NOT EXISTS evento_entregas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         evento_id INTEGER NOT NULL REFERENCES eventos(id),
-        alumno_id INTEGER REFERENCES alumnos(id),
-        alumno_txt TEXT DEFAULT '', tel_tutor TEXT DEFAULT '',
-        detalle TEXT DEFAULT '', monto REAL NOT NULL,
-        forma_pago TEXT DEFAULT 'Efectivo', estado TEXT DEFAULT 'Pagado',
-        bono_numero INTEGER DEFAULT NULL,
-        rendido INTEGER DEFAULT 0,
+        alumno_id INTEGER NOT NULL REFERENCES alumnos(id),
+        alumno_txt TEXT DEFAULT '',
+        tel_tutor TEXT DEFAULT '',
+        tarjeta_desde INTEGER NOT NULL,
+        tarjeta_hasta INTEGER NOT NULL,
+        cantidad INTEGER NOT NULL,
+        creado_en TEXT DEFAULT (datetime('now','localtime'))
+    );
+    CREATE TABLE IF NOT EXISTS evento_tarjetas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        evento_id INTEGER NOT NULL REFERENCES eventos(id),
+        entrega_id INTEGER NOT NULL REFERENCES evento_entregas(id),
+        alumno_id INTEGER NOT NULL REFERENCES alumnos(id),
+        alumno_txt TEXT DEFAULT '',
+        numero INTEGER NOT NULL,
+        tipo_rendicion TEXT DEFAULT NULL,
+        monto_rendido REAL DEFAULT 0,
+        forma_pago TEXT DEFAULT 'Efectivo',
         fecha_rendicion TEXT DEFAULT NULL,
-        fecha_pago TEXT DEFAULT (datetime('now','localtime'))
+        rendida INTEGER DEFAULT 0,
+        UNIQUE(evento_id, numero)
     );
     CREATE TABLE IF NOT EXISTS prendas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -97,16 +109,17 @@ def init_db():
         creado_en TEXT DEFAULT (datetime('now','localtime'))
     );
     """)
-    for alter in [
+
+    # Migraciones para bases existentes
+    migraciones = [
         "ALTER TABLE alumnos ADD COLUMN dni TEXT DEFAULT ''",
-        "ALTER TABLE eventos ADD COLUMN bono_desde INTEGER DEFAULT NULL",
-        "ALTER TABLE eventos ADD COLUMN bono_hasta INTEGER DEFAULT NULL",
-        "ALTER TABLE evento_cobros ADD COLUMN bono_numero INTEGER DEFAULT NULL",
-        "ALTER TABLE evento_cobros ADD COLUMN rendido INTEGER DEFAULT 0",
-        "ALTER TABLE evento_cobros ADD COLUMN fecha_rendicion TEXT DEFAULT NULL",
-    ]:
-        try: conn.execute(alter)
+        "ALTER TABLE eventos ADD COLUMN precio_tarjeta REAL DEFAULT 0",
+        "ALTER TABLE eventos ADD COLUMN ganancia_tarjeta REAL DEFAULT 0",
+    ]
+    for m in migraciones:
+        try: conn.execute(m)
         except: pass
+
     cur = conn.execute("SELECT COUNT(*) FROM alumnos")
     if cur.fetchone()[0] == 0:
         _seed_demo(conn)
@@ -139,33 +152,39 @@ def _seed_demo(conn):
         (3,'Cuota mensual','Marzo 2026',3500,'Pendiente','',''),
         (4,'Cuota mensual','Marzo 2026',3500,'Vencido','',''),
         (5,'Cuota mensual','Marzo 2026',3500,'Pagado','Efectivo','07/03/2026'),
-        (6,'Cuota mensual','Marzo 2026',3500,'Pendiente','',''),
-        (7,'Cuota mensual','Marzo 2026',3500,'Pagado','Debito','06/03/2026'),
-        (8,'Cuota mensual','Marzo 2026',3500,'Pagado','Efectivo','04/03/2026'),
-        (9,'Cuota mensual','Marzo 2026',3500,'Vencido','',''),
         (1,'Matricula',None,5000,'Pagado','Debito','10/02/2026'),
         (2,'Matricula',None,5000,'Pagado','Efectivo','08/02/2026'),
-        (3,'Matricula',None,5000,'Pendiente','',''),
-        (4,'Matricula',None,5000,'Vencido','',''),
     ]:
         conn.execute("INSERT INTO cuotas (alumno_id,concepto,mes,monto,estado,forma_pago,fecha_pago) VALUES (?,?,?,?,?,?,?)", c)
-    for e in [
-        ('Locro patriotico','25/05/2026','Venta de comida','Venta de porciones de locro','Activo',1,100),
-        ('Venta productos limpieza','Abril 2026','Venta de productos','Detergente, limpiador, esponja','Proximo',None,None),
-        ('Rifa anual','Agosto 2026','Rifas','Rifa con premios donados','Proximo',1,500),
-    ]:
-        conn.execute("INSERT INTO eventos (nombre,fecha,tipo,descripcion,estado,bono_desde,bono_hasta) VALUES (?,?,?,?,?,?,?)", e)
+    # Evento demo con tarjetas
+    conn.execute("INSERT INTO eventos (nombre,fecha,tipo,descripcion,estado,precio_tarjeta,ganancia_tarjeta) VALUES (?,?,?,?,?,?,?)",
+        ('Rifa anual','Agosto 2026','Rifas','Rifa con premios donados','Activo',5000,2000))
+    conn.execute("INSERT INTO eventos (nombre,fecha,tipo,descripcion,estado,precio_tarjeta,ganancia_tarjeta) VALUES (?,?,?,?,?,?,?)",
+        ('Locro patriotico','25/05/2026','Venta de comida','Venta de porciones de locro','Proximo',1500,500))
+    # Entrega demo
+    conn.execute("INSERT INTO evento_entregas (evento_id,alumno_id,alumno_txt,tel_tutor,tarjeta_desde,tarjeta_hasta,cantidad) VALUES (?,?,?,?,?,?,?)",
+        (1,1,'Garcia, Lucia','11 8765-4321',1,5,5))
+    conn.execute("INSERT INTO evento_entregas (evento_id,alumno_id,alumno_txt,tel_tutor,tarjeta_desde,tarjeta_hasta,cantidad) VALUES (?,?,?,?,?,?,?)",
+        (1,2,'Perez, Tomas','11 7654-3210',6,10,5))
+    # Tarjetas demo
+    for n in range(1, 6):
+        conn.execute("INSERT INTO evento_tarjetas (evento_id,entrega_id,alumno_id,alumno_txt,numero) VALUES (?,?,?,?,?)",
+            (1,1,1,'Garcia, Lucia',n))
+    for n in range(6, 11):
+        conn.execute("INSERT INTO evento_tarjetas (evento_id,entrega_id,alumno_id,alumno_txt,numero) VALUES (?,?,?,?,?)",
+            (1,2,2,'Perez, Tomas',n))
+    # Rendicion demo
+    conn.execute("UPDATE evento_tarjetas SET rendida=1, tipo_rendicion='venta', monto_rendido=5000, forma_pago='Efectivo', fecha_rendicion=? WHERE evento_id=1 AND numero=1",
+        (datetime.now().strftime('%d/%m/%Y'),))
+    conn.execute("UPDATE evento_tarjetas SET rendida=1, tipo_rendicion='ganancia', monto_rendido=2000, forma_pago='Efectivo', fecha_rendicion=? WHERE evento_id=1 AND numero=2",
+        (datetime.now().strftime('%d/%m/%Y'),))
     for r in [
         (6,1,'Ruiz, Martina','Campera Azul T12','11 3210-9876',8500,6500,2000,'Efectivo','15/03/2026','Con sena'),
         (7,5,'Sosa, Diego','Buzo Gris T14','11 2109-8765',6500,5000,1500,'Debito','20/03/2026','Con sena'),
-        (8,7,'Nunez, Sofia','Pantalon T10','11 1098-7654',4200,4200,0,'Efectivo','22/03/2026','Pagado'),
-        (9,3,'Vega, Carlos','Campera Azul T16','11 0987-6543',8500,8500,0,'Debito','10/03/2026','Entregado'),
     ]:
         conn.execute("INSERT INTO reservas (alumno_id,prenda_id,alumno_txt,prenda_txt,tel_tutor,precio,sena,saldo,forma_pago,fecha_entrega,estado) VALUES (?,?,?,?,?,?,?,?,?,?,?)", r)
-    conn.execute("INSERT INTO evento_cobros (evento_id,alumno_id,alumno_txt,tel_tutor,detalle,monto,forma_pago,estado,bono_numero,rendido) VALUES (?,?,?,?,?,?,?,?,?,?)",
-        (1,1,'Garcia, Lucia','11 8765-4321','2 porciones',1000,'Efectivo','Pagado',1,1))
-    conn.execute("INSERT INTO evento_cobros (evento_id,alumno_id,alumno_txt,tel_tutor,detalle,monto,forma_pago,estado,bono_numero,rendido) VALUES (?,?,?,?,?,?,?,?,?,?)",
-        (1,2,'Perez, Tomas','11 7654-3210','3 porciones',1500,'Efectivo','Pagado',2,0))
+
+# ── Servir frontend ─────────────────────────────────────────────────────────────
 
 @app.route('/')
 def index(): return send_from_directory(TEMPLATES_DIR, 'index.html')
@@ -179,7 +198,7 @@ def serve_static(filename):
     if os.path.exists(p): return send_from_directory(STATIC_DIR, filename)
     return jsonify({'error': 'Not found'}), 404
 
-# ── Alumnos ────────────────────────────────────────────────────────────────────
+# ── Alumnos ──────────────────────────────────────────────────────────────────
 
 @app.route('/api/alumnos', methods=['GET'])
 def listar_alumnos():
@@ -199,10 +218,8 @@ def crear_alumno():
     for campo in ['apellido', 'nombre', 'anio', 'tel_tutor']:
         if not d.get(campo): return err('Campo requerido: ' + campo)
     conn = get_db()
-    cur = conn.execute(
-        "INSERT INTO alumnos (apellido,nombre,dni,anio,tel_alumno,tel_tutor) VALUES (?,?,?,?,?,?)",
-        (d['apellido'], d['nombre'], d.get('dni',''), d['anio'], d.get('tel_alumno',''), d['tel_tutor'])
-    )
+    cur = conn.execute("INSERT INTO alumnos (apellido,nombre,dni,anio,tel_alumno,tel_tutor) VALUES (?,?,?,?,?,?)",
+        (d['apellido'], d['nombre'], d.get('dni',''), d['anio'], d.get('tel_alumno',''), d['tel_tutor']))
     aid = cur.lastrowid; conn.commit(); conn.close()
     return ok({'id': aid}, 201)
 
@@ -229,7 +246,7 @@ def importar_alumnos():
         anio = str(a.get('anio', '')).strip()
         tel_tutor = str(a.get('tel_tutor', '')).strip()
         if not apellido or not nombre or not anio or not tel_tutor:
-            errores.append(f'Fila {fila}: faltan campos obligatorios (apellido, nombre, anio, tel_tutor)'); continue
+            errores.append(f'Fila {fila}: faltan campos obligatorios'); continue
         try:
             conn.execute("INSERT INTO alumnos (apellido,nombre,dni,anio,tel_alumno,tel_tutor) VALUES (?,?,?,?,?,?)",
                 (apellido, nombre, str(a.get('dni','')).strip(), anio, str(a.get('tel_alumno','')).strip(), tel_tutor))
@@ -239,7 +256,7 @@ def importar_alumnos():
     conn.commit(); conn.close()
     return ok({'insertados': insertados, 'errores': errores})
 
-# ── Cuotas ─────────────────────────────────────────────────────────────────────
+# ── Cuotas ───────────────────────────────────────────────────────────────────
 
 @app.route('/api/cuotas', methods=['GET'])
 def listar_cuotas():
@@ -298,17 +315,33 @@ def registrar_pago():
     conn.commit(); conn.close()
     return ok({'id': result_id})
 
-# ── Eventos ────────────────────────────────────────────────────────────────────
+# ── Eventos ──────────────────────────────────────────────────────────────────
 
 @app.route('/api/eventos', methods=['GET'])
 def listar_eventos():
     conn = get_db()
-    eventos = [dict(r) for r in conn.execute("SELECT * FROM eventos ORDER BY id").fetchall()]
+    eventos = [dict(r) for r in conn.execute("SELECT * FROM eventos ORDER BY id DESC").fetchall()]
     for ev in eventos:
-        cobros = conn.execute("""SELECT ec.*, a.apellido, a.nombre
-            FROM evento_cobros ec LEFT JOIN alumnos a ON ec.alumno_id=a.id
-            WHERE ec.evento_id=?""", (ev['id'],)).fetchall()
-        ev['participantes'] = [dict(c) for c in cobros]
+        entregas = conn.execute("""
+            SELECT ee.*, a.apellido, a.nombre,
+                COUNT(et.id) as tarjetas_total,
+                SUM(CASE WHEN et.rendida=1 THEN 1 ELSE 0 END) as tarjetas_rendidas
+            FROM evento_entregas ee
+            JOIN alumnos a ON ee.alumno_id=a.id
+            LEFT JOIN evento_tarjetas et ON et.entrega_id=ee.id
+            WHERE ee.evento_id=?
+            GROUP BY ee.id
+        """, (ev['id'],)).fetchall()
+        ev['entregas'] = [dict(e) for e in entregas]
+        stats = conn.execute("""
+            SELECT COUNT(*) as total,
+                SUM(CASE WHEN rendida=1 THEN 1 ELSE 0 END) as rendidas,
+                SUM(CASE WHEN rendida=1 AND tipo_rendicion='venta' THEN 1 ELSE 0 END) as por_venta,
+                SUM(CASE WHEN rendida=1 AND tipo_rendicion='ganancia' THEN 1 ELSE 0 END) as por_ganancia,
+                SUM(CASE WHEN rendida=1 THEN monto_rendido ELSE 0 END) as monto_rendido
+            FROM evento_tarjetas WHERE evento_id=?
+        """, (ev['id'],)).fetchone()
+        ev['stats'] = dict(stats)
     conn.close()
     return ok(eventos)
 
@@ -316,53 +349,137 @@ def listar_eventos():
 def crear_evento():
     d = request.json or {}
     if not d.get('nombre'): return err('El nombre es requerido')
-    bd = d.get('bono_desde'); bh = d.get('bono_hasta')
     conn = get_db()
-    cur = conn.execute("INSERT INTO eventos (nombre,fecha,tipo,descripcion,estado,bono_desde,bono_hasta) VALUES (?,?,?,?,?,?,?)",
+    cur = conn.execute("INSERT INTO eventos (nombre,fecha,tipo,descripcion,estado,precio_tarjeta,ganancia_tarjeta) VALUES (?,?,?,?,?,?,?)",
         (d['nombre'], d.get('fecha',''), d.get('tipo','Otro'), d.get('descripcion',''),
-         d.get('estado','Proximo'), int(bd) if bd else None, int(bh) if bh else None))
+         d.get('estado','Proximo'), float(d.get('precio_tarjeta',0)), float(d.get('ganancia_tarjeta',0))))
     conn.commit(); conn.close()
     return ok({'id': cur.lastrowid}, 201)
 
 @app.route('/api/eventos/<int:id>', methods=['PUT'])
 def editar_evento(id):
     d = request.json or {}
-    bd = d.get('bono_desde'); bh = d.get('bono_hasta')
     conn = get_db()
-    conn.execute("UPDATE eventos SET nombre=?,fecha=?,tipo=?,descripcion=?,estado=?,bono_desde=?,bono_hasta=? WHERE id=?",
+    conn.execute("UPDATE eventos SET nombre=?,fecha=?,tipo=?,descripcion=?,estado=?,precio_tarjeta=?,ganancia_tarjeta=? WHERE id=?",
         (d.get('nombre'), d.get('fecha',''), d.get('tipo','Otro'), d.get('descripcion',''),
-         d.get('estado','Proximo'), int(bd) if bd else None, int(bh) if bh else None, id))
+         d.get('estado','Proximo'), float(d.get('precio_tarjeta',0)), float(d.get('ganancia_tarjeta',0)), id))
     conn.commit(); conn.close()
     return ok({'id': id})
 
-@app.route('/api/eventos/<int:id>/cobros', methods=['POST'])
-def registrar_cobro_evento(id):
+# ── Entregas de tarjetas ──────────────────────────────────────────────────────
+
+@app.route('/api/eventos/<int:ev_id>/entregas', methods=['POST'])
+def crear_entrega(ev_id):
     d = request.json or {}
-    monto = d.get('monto')
-    if not monto: return err('El monto es requerido')
+    alumno_id = d.get('alumno_id')
+    desde = d.get('tarjeta_desde')
+    hasta = d.get('tarjeta_hasta')
+    if not alumno_id or not desde or not hasta:
+        return err('alumno_id, tarjeta_desde y tarjeta_hasta son requeridos')
+    desde = int(desde); hasta = int(hasta)
+    if desde > hasta:
+        return err('El número inicial debe ser menor o igual al final')
     conn = get_db()
-    existing = None
-    if d.get('alumno_id'):
-        existing = conn.execute("SELECT id FROM evento_cobros WHERE evento_id=? AND alumno_id=?", (id, d['alumno_id'])).fetchone()
-    if existing:
-        conn.execute("UPDATE evento_cobros SET monto=?,forma_pago=?,estado='Pagado',bono_numero=?,fecha_pago=? WHERE id=?",
-            (monto, d.get('forma_pago','Efectivo'), d.get('bono_numero'), datetime.now().strftime('%d/%m/%Y'), existing['id']))
-    else:
-        conn.execute("INSERT INTO evento_cobros (evento_id,alumno_id,alumno_txt,tel_tutor,detalle,monto,forma_pago,bono_numero,fecha_pago) VALUES (?,?,?,?,?,?,?,?,?)",
-            (id, d.get('alumno_id'), d.get('alumno_txt',''), d.get('tel_tutor',''),
-             d.get('detalle',''), monto, d.get('forma_pago','Efectivo'), d.get('bono_numero'), datetime.now().strftime('%d/%m/%Y')))
+    # Verificar que no haya superposición de números en el evento
+    overlap = conn.execute("""
+        SELECT et.numero FROM evento_tarjetas et
+        WHERE et.evento_id=? AND et.numero BETWEEN ? AND ?
+    """, (ev_id, desde, hasta)).fetchone()
+    if overlap:
+        conn.close()
+        return err(f'El número de tarjeta {overlap["numero"]} ya está asignado en este evento')
+    alumno = conn.execute("SELECT apellido, nombre, tel_tutor FROM alumnos WHERE id=?", (alumno_id,)).fetchone()
+    if not alumno:
+        conn.close(); return err('Alumno no encontrado')
+    alumno_txt = f"{alumno['apellido']}, {alumno['nombre']}"
+    cantidad = hasta - desde + 1
+    cur = conn.execute("INSERT INTO evento_entregas (evento_id,alumno_id,alumno_txt,tel_tutor,tarjeta_desde,tarjeta_hasta,cantidad) VALUES (?,?,?,?,?,?,?)",
+        (ev_id, alumno_id, alumno_txt, alumno['tel_tutor'], desde, hasta, cantidad))
+    entrega_id = cur.lastrowid
+    # Crear una fila por cada tarjeta
+    for n in range(desde, hasta + 1):
+        conn.execute("INSERT INTO evento_tarjetas (evento_id,entrega_id,alumno_id,alumno_txt,numero) VALUES (?,?,?,?,?)",
+            (ev_id, entrega_id, alumno_id, alumno_txt, n))
+    conn.commit(); conn.close()
+    return ok({'id': entrega_id, 'cantidad': cantidad}, 201)
+
+@app.route('/api/eventos/<int:ev_id>/entregas/<int:entrega_id>', methods=['DELETE'])
+def eliminar_entrega(ev_id, entrega_id):
+    conn = get_db()
+    # Solo se puede eliminar si no hay tarjetas rendidas
+    rendidas = conn.execute("SELECT COUNT(*) FROM evento_tarjetas WHERE entrega_id=? AND rendida=1", (entrega_id,)).fetchone()[0]
+    if rendidas > 0:
+        conn.close(); return err('No se puede eliminar: hay tarjetas ya rendidas en esta entrega')
+    conn.execute("DELETE FROM evento_tarjetas WHERE entrega_id=?", (entrega_id,))
+    conn.execute("DELETE FROM evento_entregas WHERE id=? AND evento_id=?", (entrega_id, ev_id))
     conn.commit(); conn.close()
     return ok()
 
-@app.route('/api/eventos/<int:ev_id>/cobros/<int:cobro_id>/rendir', methods=['PATCH'])
-def rendir_cobro(ev_id, cobro_id):
-    d = request.json or {}
-    rendido = 1 if d.get('rendido') else 0
-    fecha = datetime.now().strftime('%d/%m/%Y') if rendido else None
+# ── Tarjetas (rendición) ──────────────────────────────────────────────────────
+
+@app.route('/api/eventos/<int:ev_id>/tarjetas', methods=['GET'])
+def listar_tarjetas_evento(ev_id):
+    alumno_id = request.args.get('alumno_id')
     conn = get_db()
-    conn.execute("UPDATE evento_cobros SET rendido=?, fecha_rendicion=? WHERE id=? AND evento_id=?", (rendido, fecha, cobro_id, ev_id))
+    if alumno_id:
+        rows = conn.execute("""SELECT * FROM evento_tarjetas WHERE evento_id=? AND alumno_id=? ORDER BY numero""",
+            (ev_id, alumno_id)).fetchall()
+    else:
+        rows = conn.execute("""SELECT * FROM evento_tarjetas WHERE evento_id=? ORDER BY numero""", (ev_id,)).fetchall()
+    conn.close()
+    return ok([dict(r) for r in rows])
+
+@app.route('/api/eventos/<int:ev_id>/tarjetas/<int:tarjeta_id>/rendir', methods=['PATCH'])
+def rendir_tarjeta(ev_id, tarjeta_id):
+    """Marcar una tarjeta como rendida (venta o ganancia) o desmarcarla"""
+    d = request.json or {}
+    rendida = 1 if d.get('rendida') else 0
+    conn = get_db()
+    if rendida:
+        tipo = d.get('tipo_rendicion')  # 'venta' o 'ganancia'
+        if tipo not in ('venta', 'ganancia'):
+            conn.close(); return err("tipo_rendicion debe ser 'venta' o 'ganancia'")
+        # Calcular monto según tipo
+        ev = conn.execute("SELECT precio_tarjeta, ganancia_tarjeta FROM eventos WHERE id=?", (ev_id,)).fetchone()
+        if not ev: conn.close(); return err('Evento no encontrado', 404)
+        monto = ev['precio_tarjeta'] if tipo == 'venta' else ev['ganancia_tarjeta']
+        # Permitir override de monto
+        if d.get('monto_rendido') is not None:
+            monto = float(d['monto_rendido'])
+        conn.execute("""UPDATE evento_tarjetas
+            SET rendida=1, tipo_rendicion=?, monto_rendido=?, forma_pago=?, fecha_rendicion=?
+            WHERE id=? AND evento_id=?""",
+            (tipo, monto, d.get('forma_pago','Efectivo'), datetime.now().strftime('%d/%m/%Y'), tarjeta_id, ev_id))
+    else:
+        conn.execute("""UPDATE evento_tarjetas
+            SET rendida=0, tipo_rendicion=NULL, monto_rendido=0, forma_pago='Efectivo', fecha_rendicion=NULL
+            WHERE id=? AND evento_id=?""", (tarjeta_id, ev_id))
     conn.commit(); conn.close()
     return ok()
+
+@app.route('/api/eventos/<int:ev_id>/tarjetas/rendir-lote', methods=['POST'])
+def rendir_tarjetas_lote(ev_id):
+    """Rendir múltiples tarjetas de un alumno en un solo paso"""
+    d = request.json or {}
+    ids = d.get('ids', [])          # lista de tarjeta_id
+    tipo = d.get('tipo_rendicion')  # 'venta' o 'ganancia'
+    forma_pago = d.get('forma_pago', 'Efectivo')
+    if not ids or tipo not in ('venta', 'ganancia'):
+        return err("ids y tipo_rendicion ('venta' o 'ganancia') son requeridos")
+    conn = get_db()
+    ev = conn.execute("SELECT precio_tarjeta, ganancia_tarjeta FROM eventos WHERE id=?", (ev_id,)).fetchone()
+    if not ev: conn.close(); return err('Evento no encontrado', 404)
+    monto = ev['precio_tarjeta'] if tipo == 'venta' else ev['ganancia_tarjeta']
+    fecha = datetime.now().strftime('%d/%m/%Y')
+    for tid in ids:
+        conn.execute("""UPDATE evento_tarjetas
+            SET rendida=1, tipo_rendicion=?, monto_rendido=?, forma_pago=?, fecha_rendicion=?
+            WHERE id=? AND evento_id=?""",
+            (tipo, monto, forma_pago, fecha, tid, ev_id))
+    conn.commit(); conn.close()
+    return ok({'actualizadas': len(ids)})
+
+# ── Reporte de evento ─────────────────────────────────────────────────────────
 
 @app.route('/api/eventos/<int:id>/reporte', methods=['GET'])
 def reporte_evento(id):
@@ -370,23 +487,61 @@ def reporte_evento(id):
     ev = conn.execute("SELECT * FROM eventos WHERE id=?", (id,)).fetchone()
     if not ev: conn.close(); return err('Evento no encontrado', 404)
     ev = dict(ev)
-    cobros = conn.execute("""SELECT ec.*, a.apellido, a.nombre FROM evento_cobros ec
-        LEFT JOIN alumnos a ON ec.alumno_id=a.id WHERE ec.evento_id=? ORDER BY ec.id""", (id,)).fetchall()
+
+    entregas = conn.execute("""
+        SELECT ee.*, a.apellido, a.nombre
+        FROM evento_entregas ee JOIN alumnos a ON ee.alumno_id=a.id
+        WHERE ee.evento_id=? ORDER BY ee.tarjeta_desde
+    """, (id,)).fetchall()
+
+    tarjetas = conn.execute("""
+        SELECT et.*, a.apellido, a.nombre
+        FROM evento_tarjetas et JOIN alumnos a ON et.alumno_id=a.id
+        WHERE et.evento_id=? ORDER BY et.numero
+    """, (id,)).fetchall()
     conn.close()
-    cobros_list = [dict(c) for c in cobros]
-    rendidos = [c for c in cobros_list if c['rendido']]
-    pendientes = [c for c in cobros_list if not c['rendido']]
+
+    tarjetas_list = [dict(t) for t in tarjetas]
+    entregas_list = [dict(e) for e in entregas]
+
+    total = len(tarjetas_list)
+    rendidas = [t for t in tarjetas_list if t['rendida']]
+    pendientes = [t for t in tarjetas_list if not t['rendida']]
+    por_venta = [t for t in rendidas if t['tipo_rendicion'] == 'venta']
+    por_ganancia = [t for t in rendidas if t['tipo_rendicion'] == 'ganancia']
+    monto_venta = sum(t['monto_rendido'] for t in por_venta)
+    monto_ganancia = sum(t['monto_rendido'] for t in por_ganancia)
+    monto_total = monto_venta + monto_ganancia
+
+    # Agrupar pendientes por alumno
+    pendientes_por_alumno = {}
+    for t in pendientes:
+        aid = t['alumno_id']
+        if aid not in pendientes_por_alumno:
+            pendientes_por_alumno[aid] = {'alumno_txt': t['alumno_txt'], 'numeros': []}
+        pendientes_por_alumno[aid]['numeros'].append(t['numero'])
+
     return ok({
         'evento': ev,
-        'rango_bonos': f"{ev['bono_desde']} al {ev['bono_hasta']}" if ev.get('bono_desde') and ev.get('bono_hasta') else None,
-        'total_emitidos': (ev['bono_hasta'] - ev['bono_desde'] + 1) if ev.get('bono_desde') and ev.get('bono_hasta') else None,
-        'total_cobros': len(cobros_list),
-        'rendidos': {'cantidad': len(rendidos), 'monto': sum(c['monto'] for c in rendidos), 'detalle': rendidos},
-        'pendientes': {'cantidad': len(pendientes), 'monto': sum(c['monto'] for c in pendientes), 'detalle': pendientes},
-        'monto_total': sum(c['monto'] for c in cobros_list),
+        'total_tarjetas_entregadas': total,
+        'total_entregas': len(entregas_list),
+        'rendidas': {
+            'cantidad': len(rendidas),
+            'por_venta': {'cantidad': len(por_venta), 'monto': monto_venta, 'numeros': [t['numero'] for t in por_venta]},
+            'por_ganancia': {'cantidad': len(por_ganancia), 'monto': monto_ganancia, 'numeros': [t['numero'] for t in por_ganancia]},
+            'monto_total': monto_total,
+        },
+        'pendientes': {
+            'cantidad': len(pendientes),
+            'monto_estimado_venta': len(pendientes) * ev['precio_tarjeta'],
+            'monto_estimado_ganancia': len(pendientes) * ev['ganancia_tarjeta'],
+            'numeros': [t['numero'] for t in pendientes],
+            'por_alumno': list(pendientes_por_alumno.values()),
+        },
+        'entregas': entregas_list,
     })
 
-# ── Prendas ────────────────────────────────────────────────────────────────────
+# ── Prendas ───────────────────────────────────────────────────────────────────
 
 @app.route('/api/prendas', methods=['GET'])
 def listar_prendas():
@@ -417,7 +572,7 @@ def ajustar_stock(id):
     conn.commit(); conn.close()
     return ok()
 
-# ── Reservas ───────────────────────────────────────────────────────────────────
+# ── Reservas ──────────────────────────────────────────────────────────────────
 
 @app.route('/api/reservas', methods=['GET'])
 def listar_reservas():
@@ -469,7 +624,7 @@ def entregar_reserva(id):
     conn.commit(); conn.close()
     return ok()
 
-# ── Dashboard ──────────────────────────────────────────────────────────────────
+# ── Dashboard ─────────────────────────────────────────────────────────────────
 
 @app.route('/api/dashboard', methods=['GET'])
 def dashboard():
@@ -480,25 +635,30 @@ def dashboard():
         pendientes = conn.execute("SELECT COUNT(*) as cnt, COALESCE(SUM(monto),0) as suma FROM cuotas WHERE estado IN ('Pendiente','Vencido')").fetchone()
         stock_total = conn.execute("SELECT COALESCE(SUM(stock),0) as total FROM prendas").fetchone()
         reservado = conn.execute("SELECT COUNT(*) as cnt FROM reservas WHERE estado != 'Entregado'").fetchone()
-        eventos_stats = conn.execute("""SELECT COUNT(DISTINCT e.id) as total_eventos,
-            COALESCE(SUM(ec.monto),0) as total_recaudado,
-            COALESCE(SUM(CASE WHEN ec.rendido=1 THEN ec.monto ELSE 0 END),0) as total_rendido,
-            COALESCE(SUM(CASE WHEN ec.rendido=0 THEN ec.monto ELSE 0 END),0) as total_pendiente_rendicion
-            FROM eventos e LEFT JOIN evento_cobros ec ON ec.evento_id=e.id""").fetchone()
+        eventos_stats = conn.execute("""
+            SELECT COUNT(DISTINCT e.id) as total_eventos,
+                COALESCE(SUM(et.monto_rendido),0) as total_rendido,
+                SUM(CASE WHEN et.rendida=0 THEN 1 ELSE 0 END) as tarjetas_pendientes
+            FROM eventos e LEFT JOIN evento_tarjetas et ON et.evento_id=e.id
+        """).fetchone()
         total_cuotas = conn.execute("SELECT COALESCE(SUM(monto),0) as suma FROM cuotas WHERE estado='Pagado'").fetchone()
-        total_ev = conn.execute("SELECT COALESCE(SUM(monto),0) as suma FROM evento_cobros WHERE estado='Pagado'").fetchone()
+        total_ev = conn.execute("SELECT COALESCE(SUM(monto_rendido),0) as suma FROM evento_tarjetas WHERE rendida=1").fetchone()
         total_res = conn.execute("SELECT COALESCE(SUM(sena),0) as suma FROM reservas").fetchone()
         ultimos_pagos = conn.execute("""SELECT c.*, a.apellido, a.nombre, a.tel_tutor
             FROM cuotas c JOIN alumnos a ON c.alumno_id=a.id
             WHERE c.estado='Pagado' ORDER BY c.id DESC LIMIT 5""").fetchall()
         reservas_pendientes = conn.execute("SELECT * FROM reservas WHERE estado IN ('Con sena','Pagado') ORDER BY id DESC LIMIT 4").fetchall()
-        eventos = conn.execute("SELECT * FROM eventos ORDER BY id LIMIT 4").fetchall()
+        eventos = conn.execute("SELECT * FROM eventos ORDER BY id DESC LIMIT 4").fetchall()
         return ok({
             'alumnos_activos': alumnos_activos,
             'cuotas_cobradas_mes': {'total': cuotas_mes['suma'], 'cantidad': cuotas_mes['total']},
             'pendientes': {'cantidad': pendientes['cnt'], 'suma': pendientes['suma']},
             'stock': {'total': stock_total['total'], 'reservado': reservado['cnt']},
-            'eventos_stats': dict(eventos_stats),
+            'eventos_stats': {
+                'total_eventos': eventos_stats['total_eventos'],
+                'total_rendido': eventos_stats['total_rendido'],
+                'tarjetas_pendientes': eventos_stats['tarjetas_pendientes'] or 0,
+            },
             'recaudacion_total': total_cuotas['suma'] + total_ev['suma'] + total_res['suma'],
             'ultimos_pagos': [dict(r) for r in ultimos_pagos],
             'reservas_pendientes': [dict(r) for r in reservas_pendientes],

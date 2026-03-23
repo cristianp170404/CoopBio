@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Reservas – Cooperadora Escolar</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
@@ -20,15 +19,15 @@
         <input type="search" id="buscar" placeholder="Buscar por alumno o prenda..." oninput="filtrar()" style="max-width:260px">
         <select id="filtro-estado" onchange="filtrar()" style="max-width:160px">
           <option value="">Todos los estados</option>
-          <option value="Con seña">Con seña</option>
+          <option value="Con sena">Con seña</option>
           <option value="Pagado">Pagado</option>
           <option value="Entregado">Entregado</option>
         </select>
       </div>
       <div class="card" style="margin:0;padding:0;overflow:hidden">
         <table class="table">
-          <thead><tr><th>Alumno</th><th>Prenda</th><th>Precio total</th><th>Entregado</th><th>Saldo</th><th>Forma pago</th><th>Estado</th><th style="width:160px"></th></tr></thead>
-          <tbody id="tbody-res"></tbody>
+          <thead><tr><th>Alumno</th><th>Prenda</th><th>Precio</th><th>Entregado</th><th>Saldo</th><th>Forma pago</th><th>Estado</th><th style="width:170px"></th></tr></thead>
+          <tbody id="tbody"></tbody>
         </table>
       </div>
     </div>
@@ -36,60 +35,46 @@
 </div>
 
 <!-- MODAL NUEVA RESERVA -->
-<div class="modal-overlay" id="modal-res">
+<div class="modal-overlay" id="modal-reserva">
   <div class="modal">
     <div class="modal-title">Nueva reserva</div>
     <div class="form-group"><label class="form-label">Alumno *</label>
-      <select id="r-alumno"><option value="">Seleccionar...</option></select>
+      <select id="r-alumno"><option value="">Seleccionar alumno...</option></select>
     </div>
-    <div class="form-group"><label class="form-label">Prenda *</label>
-      <select id="r-prenda" onchange="actualizarPrecio()"><option value="">Seleccionar...</option></select>
+    <div class="form-group"><label class="form-label">Tel. tutor (WhatsApp)</label>
+      <input type="tel" id="r-tel" placeholder="Se completa automáticamente">
     </div>
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">Precio total</label><input type="number" id="r-precio" readonly style="background:var(--bg)"></div>
-      <div class="form-group"><label class="form-label">Seña / Entrega ($)</label><input type="number" id="r-sena" placeholder="0" oninput="calcSaldo()"></div>
+      <div class="form-group"><label class="form-label">Prenda *</label>
+        <select id="r-prenda"><option value="">Seleccionar prenda...</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Precio ($) *</label>
+        <input type="number" id="r-precio" min="0" oninput="calcSaldo()">
+      </div>
     </div>
-    <div class="form-group"><label class="form-label">Saldo pendiente</label><input type="number" id="r-saldo" readonly style="background:var(--bg)"></div>
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">Forma de pago</label>
+      <div class="form-group"><label class="form-label">Seña ($)</label>
+        <input type="number" id="r-sena" min="0" value="0" oninput="calcSaldo()">
+      </div>
+      <div class="form-group"><label class="form-label">Forma de pago seña</label>
         <select id="r-forma"><option>Efectivo</option><option>Débito</option><option>Transferencia</option></select>
       </div>
-      <div class="form-group"><label class="form-label">Fecha estimada entrega</label><input type="date" id="r-fecha"></div>
     </div>
-    <div class="form-group" style="margin-bottom:4px">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
-        <input type="checkbox" id="r-wa" checked style="width:auto;accent-color:var(--wa)">
-        Enviar confirmación de reserva por WhatsApp
-      </label>
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="cerrarModal()">Cancelar</button>
-      <button class="btn btn-wa" onclick="guardarReserva()">&#128234; Confirmar reserva</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL COBRAR SALDO -->
-<div class="modal-overlay" id="modal-saldo">
-  <div class="modal">
-    <div class="modal-title">Cobrar saldo</div>
-    <div class="form-group"><label class="form-label">Alumno</label><input type="text" id="s-alumno" readonly style="background:var(--bg)"></div>
-    <div class="form-group"><label class="form-label">Prenda</label><input type="text" id="s-prenda" readonly style="background:var(--bg)"></div>
-    <div class="form-grid">
-      <div class="form-group"><label class="form-label">Saldo a cobrar ($)</label><input type="number" id="s-monto" oninput="previewSaldo()"></div>
-      <div class="form-group"><label class="form-label">Forma de pago</label>
-        <select id="s-forma" onchange="previewSaldo()"><option>Efectivo</option><option>Débito</option><option>Transferencia</option></select>
+    <div id="saldo-preview" style="font-size:13px;color:var(--text-3);margin-bottom:12px"></div>
+    <div class="form-group">
+      <label class="form-label">¿La prenda ya fue entregada?</label>
+      <div style="display:flex;gap:16px;margin-top:6px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px">
+          <input type="radio" name="r-entregado" value="0" checked style="width:auto"> No
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px">
+          <input type="radio" name="r-entregado" value="1" style="width:auto"> Sí
+        </label>
       </div>
     </div>
-    <div class="form-group" style="margin-bottom:4px">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
-        <input type="checkbox" id="s-wa" checked style="width:auto;accent-color:var(--wa)">Enviar comprobante por WhatsApp
-      </label>
-    </div>
-    <div class="wa-preview" id="s-preview"></div>
     <div class="modal-footer">
-      <button class="btn" onclick="cerrarModalSaldo()">Cancelar</button>
-      <button class="btn btn-wa" onclick="confirmarSaldo()">&#128234; Confirmar cobro</button>
+      <button class="btn" onclick="cerrar('modal-reserva')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarReserva()">Guardar reserva</button>
     </div>
   </div>
 </div>
@@ -98,190 +83,124 @@
 <script src="/static/api.js"></script>
 <script src="/static/sidebar.js"></script>
 <script>
-var todasReservas = [];
-var reservaActiva = null;
+var reservas=[], alumnosLista=[], prendasLista=[];
 
-function fmt(n){ return Number(n).toLocaleString('es-AR'); }
+function fmt(n){return Number(n||0).toLocaleString('es-AR');}
 
-function badgeEstado(e){
-  if(e==='Con seña') return '<span class="badge badge-amber">Con seña</span>';
-  if(e==='Pagado') return '<span class="badge badge-green">Pagado</span>';
-  if(e==='Entregado') return '<span class="badge badge-blue">Entregado</span>';
+function badge(e){
+  if(e==='Con sena') return '<span class="badge badge-amber">Con seña</span>';
+  if(e==='Pagado') return '<span class="badge badge-blue">Pagado</span>';
+  if(e==='Entregado') return '<span class="badge badge-green">Entregado</span>';
   return '<span class="badge">'+e+'</span>';
 }
 
-function accion(r){
-  if(r.estado==='Con seña') return `<button class="btn btn-sm btn-primary" onclick="abrirSaldo(${r.id})">Cobrar saldo</button>`;
-  if(r.estado==='Pagado') return `<button class="btn btn-sm" style="background:var(--green);color:#fff" onclick="entregar(${r.id})">Entregar prenda</button>`;
-  if(r.estado==='Entregado') return `<button class="btn btn-sm btn-wa" onclick="enviarWA('${r.alumno_txt}','${r.tel_tutor||''}','${r.prenda_txt}')">&#128234; WA</button>`;
-  return '';
-}
-
-async function cargarAlumnos(){
-  var lista = await API.get('/api/alumnos');
-  var sel = document.getElementById('r-alumno');
-  lista.forEach(a=>{
-    sel.innerHTML+=`<option value="${a.id}" data-tel="${a.tel_tutor}">${a.apellido}, ${a.nombre}</option>`;
+async function init(){
+  [reservas,alumnosLista,prendasLista]=await Promise.all([API.get('/api/reservas'),API.get('/api/alumnos'),API.get('/api/prendas')]);
+  var selA=document.getElementById('r-alumno');
+  selA.innerHTML='<option value="">Seleccionar alumno...</option>';
+  alumnosLista.forEach(a=>selA.innerHTML+=`<option value="${a.id}" data-tel="${a.tel_tutor}">${a.apellido}, ${a.nombre}</option>`);
+  selA.onchange=function(){
+    var opt=selA.options[selA.selectedIndex];
+    document.getElementById('r-tel').value=opt.dataset.tel||'';
+  };
+  var selP=document.getElementById('r-prenda');
+  selP.innerHTML='<option value="">Seleccionar prenda...</option>';
+  prendasLista.forEach(p=>{
+    selP.innerHTML+=`<option value="${p.id}" data-precio="${p.precio}">${p.nombre} ${p.talle} ${p.color} – $${fmt(p.precio)}</option>`;
   });
+  selP.onchange=function(){
+    var opt=selP.options[selP.selectedIndex];
+    if(opt.dataset.precio) document.getElementById('r-precio').value=opt.dataset.precio;
+    calcSaldo();
+  };
+  filtrar();
 }
 
-async function cargarPrendas(){
-  var lista = await API.get('/api/prendas');
-  var sel = document.getElementById('r-prenda');
-  lista.forEach(p=>{
-    var disp = p.stock - p.reservado;
-    if(disp > 0){
-      sel.innerHTML+=`<option value="${p.id}" data-precio="${p.precio}" data-txt="${p.nombre} ${p.color} ${p.talle}">${p.nombre} ${p.color} ${p.talle} – $${fmt(p.precio)}</option>`;
-    }
-  });
-}
-
-async function cargarReservas(){
-  try {
-    todasReservas = await API.get('/api/reservas');
-    filtrar();
-  } catch(e){ showToast(e.message,'error'); }
+function calcSaldo(){
+  var precio=parseFloat(document.getElementById('r-precio').value)||0;
+  var sena=parseFloat(document.getElementById('r-sena').value)||0;
+  var saldo=Math.max(0,precio-sena);
+  document.getElementById('saldo-preview').textContent=saldo>0?'Saldo pendiente: $'+fmt(saldo):'Pago completo ✓';
 }
 
 function filtrar(){
   var q=document.getElementById('buscar').value.toLowerCase();
-  var est=document.getElementById('filtro-estado').value;
-  var data=todasReservas.filter(r=>
-    ((r.alumno_txt||'')+' '+(r.prenda_txt||'')).toLowerCase().includes(q) &&
-    (!est||r.estado===est)
+  var estado=document.getElementById('filtro-estado').value;
+  var data=reservas.filter(r=>
+    ((r.alumno_txt||'')+(r.prenda_txt||'')).toLowerCase().includes(q)&&
+    (!estado||r.estado===estado)
   );
   render(data);
 }
 
 function render(data){
-  var tb=document.getElementById('tbody-res');
-  if(!data.length){
-    tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--text-3);padding:32px">Sin reservas</td></tr>';
-    return;
-  }
-  tb.innerHTML=data.map(r=>`<tr>
-    <td>${r.alumno_txt||'–'}</td>
-    <td>${r.prenda_txt||'–'}</td>
-    <td>$${fmt(r.precio)}</td>
-    <td>$${fmt(r.sena)}</td>
-    <td class="${r.saldo>0?'text-red':'text-green'}">$${fmt(r.saldo)}</td>
-    <td>${r.forma_pago}</td>
-    <td>${badgeEstado(r.estado)}</td>
-    <td>${accion(r)}</td>
-  </tr>`).join('');
+  document.getElementById('tbody').innerHTML=data.length
+    ?data.map(r=>`<tr>
+        <td>${r.alumno_txt||'–'}</td><td>${r.prenda_txt||'–'}</td>
+        <td>$${fmt(r.precio)}</td>
+        <td style="text-align:center">${r.entregado?'<span style="color:var(--green);font-weight:700">Sí</span>':'<span style="color:var(--text-3)">No</span>'}</td>
+        <td class="${r.saldo>0?'':''}"><strong style="color:${r.saldo>0?'var(--amber)':'var(--green)'}">$${fmt(r.saldo)}</strong></td>
+        <td>${r.forma_pago}</td>
+        <td>${badge(r.estado)}</td>
+        <td style="display:flex;gap:4px;flex-wrap:wrap">
+          ${r.estado!=='Entregado'&&r.saldo>0?`<button class="btn btn-sm btn-primary" onclick="abrirCobrarSaldo(${r.id},'${r.alumno_txt}',${r.saldo})">Cobrar saldo</button>`:''}
+          ${r.estado!=='Entregado'&&r.saldo===0?`<button class="btn btn-sm btn-wa" onclick="marcarEntregado(${r.id})">✓ Entregar</button>`:''}
+        </td>
+      </tr>`).join('')
+    :'<tr><td colspan="8" style="text-align:center;color:var(--text-3);padding:32px">Sin reservas</td></tr>';
 }
 
-function abrirModalReserva(){ document.getElementById('modal-res').classList.add('open'); }
-function cerrarModal(){ document.getElementById('modal-res').classList.remove('open'); }
-
-function actualizarPrecio(){
-  var sel=document.getElementById('r-prenda');
-  var pr=sel.options[sel.selectedIndex]?.dataset.precio||'';
-  document.getElementById('r-precio').value=pr;
-  calcSaldo();
+function abrirModalReserva(){
+  document.getElementById('r-alumno').value='';
+  document.getElementById('r-tel').value='';
+  document.getElementById('r-prenda').value='';
+  document.getElementById('r-precio').value='';
+  document.getElementById('r-sena').value='0';
+  document.querySelector('input[name="r-entregado"][value="0"]').checked=true;
+  document.getElementById('saldo-preview').textContent='';
+  document.getElementById('modal-reserva').classList.add('open');
 }
-
-function calcSaldo(){
-  var pr=parseInt(document.getElementById('r-precio').value)||0;
-  var sn=parseInt(document.getElementById('r-sena').value)||0;
-  document.getElementById('r-saldo').value=Math.max(0,pr-sn);
-}
-
 async function guardarReserva(){
-  var alSel=document.getElementById('r-alumno');
-  var alumnoId=alSel.value;
-  var tel=alSel.options[alSel.selectedIndex]?.dataset.tel||'';
-  var alumnoTxt=alSel.options[alSel.selectedIndex]?.text||'';
-  var prSel=document.getElementById('r-prenda');
-  var prendaId=prSel.value;
-  var prendaTxt=prSel.options[prSel.selectedIndex]?.dataset.txt||prSel.options[prSel.selectedIndex]?.text||'';
-  var precio=parseInt(document.getElementById('r-precio').value)||0;
-  var sena=parseInt(document.getElementById('r-sena').value)||0;
-  var saldo=Math.max(0,precio-sena);
+  var alumnoId=document.getElementById('r-alumno').value;
+  var prendaId=document.getElementById('r-prenda').value;
+  var precio=parseFloat(document.getElementById('r-precio').value)||0;
+  var sena=parseFloat(document.getElementById('r-sena').value)||0;
   var forma=document.getElementById('r-forma').value;
-  var fechaEnt=document.getElementById('r-fecha').value||'A confirmar';
-  var wa=document.getElementById('r-wa').checked;
-  if(!alumnoId||!prendaId||!precio){ showToast('Completá alumno, prenda y precio','error'); return; }
-  try {
-    await API.post('/api/reservas',{
-      alumno_id:parseInt(alumnoId), prenda_id:parseInt(prendaId),
-      alumno_txt:alumnoTxt, prenda_txt:prendaTxt, tel_tutor:tel,
-      precio, sena, forma_pago:forma, fecha_entrega:fechaEnt
-    });
-    cerrarModal();
-    cargarReservas();
-    if(wa&&tel){
-      var msg='🏫 Cooperadora Escolar\n✅ Reserva confirmada\nAlumno/a: '+alumnoTxt+'\nPrenda: '+prendaTxt+
-        '\nEntrega: $'+fmt(sena)+'\nSaldo: $'+fmt(saldo)+'\nFecha estimada: '+fechaEnt+'\n¡Gracias!';
-      abrirWA(tel,msg);
-    }
-    showToast('Reserva registrada'+(wa?' y WhatsApp abierto':''));
-  } catch(e){ showToast(e.message,'error'); }
+  var entregado=parseInt(document.querySelector('input[name="r-entregado"]:checked').value);
+  if(!alumnoId||!prendaId||!precio){showToast('Completá alumno, prenda y precio','error');return;}
+  var aluOpt=document.getElementById('r-alumno').options[document.getElementById('r-alumno').selectedIndex];
+  var prendaOpt=document.getElementById('r-prenda').options[document.getElementById('r-prenda').selectedIndex];
+  var alumno_txt=aluOpt.text.replace(/\s*\(.*\)\s*$/,'').trim();
+  var prenda_txt=prendaOpt.text.replace(/\s*–.*$/,'').trim();
+  var tel=document.getElementById('r-tel').value;
+  try{
+    await API.post('/api/reservas',{alumno_id:parseInt(alumnoId),prenda_id:parseInt(prendaId),
+      alumno_txt,prenda_txt,tel_tutor:tel,precio,sena,forma_pago:forma,entregado});
+    cerrar('modal-reserva');
+    reservas=await API.get('/api/reservas'); filtrar();
+    showToast('Reserva guardada');
+  }catch(e){showToast(e.message,'error');}
 }
 
-function abrirSaldo(id){
-  reservaActiva=todasReservas.find(r=>r.id===id);
-  if(!reservaActiva) return;
-  document.getElementById('s-alumno').value=reservaActiva.alumno_txt||'';
-  document.getElementById('s-prenda').value=reservaActiva.prenda_txt||'';
-  document.getElementById('s-monto').value=reservaActiva.saldo;
-  previewSaldo();
-  document.getElementById('modal-saldo').classList.add('open');
+async function abrirCobrarSaldo(id,nombre,saldo){
+  var monto=prompt('Cobrar saldo de '+nombre+'\nSaldo pendiente: $'+fmt(saldo)+'\n\nIngresá el monto a cobrar:',saldo);
+  if(!monto) return;
+  try{
+    await API.post('/api/reservas/'+id+'/cobrar-saldo',{monto:parseFloat(monto),forma_pago:'Efectivo'});
+    reservas=await API.get('/api/reservas'); filtrar(); showToast('Saldo cobrado');
+  }catch(e){showToast(e.message,'error');}
 }
 
-function cerrarModalSaldo(){ document.getElementById('modal-saldo').classList.remove('open'); }
-
-function previewSaldo(){
-  if(!reservaActiva) return;
-  var monto=parseInt(document.getElementById('s-monto').value)||0;
-  var forma=document.getElementById('s-forma').value;
-  document.getElementById('s-preview').textContent=comprobante(
-    reservaActiva.alumno_txt||'', reservaActiva.prenda_txt||'', monto, forma
-  );
+async function marcarEntregado(id){
+  if(!confirm('¿Marcar como entregado?')) return;
+  try{
+    await API.post('/api/reservas/'+id+'/entregar');
+    reservas=await API.get('/api/reservas'); filtrar(); showToast('Marcado como entregado');
+  }catch(e){showToast(e.message,'error');}
 }
 
-async function confirmarSaldo(){
-  var monto=parseInt(document.getElementById('s-monto').value)||0;
-  var forma=document.getElementById('s-forma').value;
-  var wa=document.getElementById('s-wa').checked;
-  if(!reservaActiva||!monto){ showToast('Ingresá el monto','error'); return; }
-  try {
-    var res=await API.post('/api/reservas/'+reservaActiva.id+'/cobrar-saldo',{monto,forma_pago:forma});
-    cerrarModalSaldo();
-    cargarReservas();
-    if(wa&&reservaActiva.tel_tutor)
-      abrirWA(reservaActiva.tel_tutor, comprobante(reservaActiva.alumno_txt||'',reservaActiva.prenda_txt||'',monto,forma));
-    showToast('Saldo cobrado'+(res.estado==='Pagado'?' – reserva completada':''));
-  } catch(e){ showToast(e.message,'error'); }
-}
-
-async function entregar(id){
-  try {
-    await API.post('/api/reservas/'+id+'/entregar',{});
-    var r=todasReservas.find(x=>x.id===id);
-    cargarReservas();
-    if(r&&r.tel_tutor){
-      var msg='🏫 Cooperadora Escolar\n📦 Prenda entregada\nAlumno/a: '+r.alumno_txt+'\nPrenda: '+r.prenda_txt+'\n¡Que la disfrute!';
-      abrirWA(r.tel_tutor,msg);
-    }
-    showToast('Prenda marcada como entregada');
-  } catch(e){ showToast(e.message,'error'); }
-}
-
-function enviarWA(alumno,tel,prenda){
-  var msg='🏫 Cooperadora Escolar\n📦 Comprobante de entrega\nAlumno/a: '+alumno+'\nPrenda: '+prenda+'\nFecha: '+new Date().toLocaleDateString('es-AR')+'\n¡Gracias!';
-  abrirWA(tel,msg);
-}
-
-['s-monto','s-forma'].forEach(id=>document.getElementById(id)?.addEventListener('input',previewSaldo));
-document.querySelectorAll('.modal-overlay').forEach(m=>{
-  m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open')});
-});
-
-async function init(){
-  await Promise.all([cargarAlumnos(), cargarPrendas()]);
-  cargarReservas();
-}
+function cerrar(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');}));
 init();
 </script>
 </body>

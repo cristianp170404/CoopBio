@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Indumentaria – Cooperadora Escolar</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
@@ -12,44 +11,75 @@
 <div class="layout">
   <main class="main-content">
     <header class="topbar">
-      <div><h1 class="page-title">Indumentaria</h1><p class="page-subtitle">Inventario y stock de prendas escolares</p></div>
-      <div class="topbar-actions"><button class="btn btn-primary" onclick="abrirModal()">+ Nueva prenda</button></div>
+      <div><h1 class="page-title">Indumentaria</h1><p class="page-subtitle">Gestión de stock y precios</p></div>
+      <div class="topbar-actions">
+        <button class="btn" onclick="abrirABMTipos()">⚙️ Tipos de prenda</button>
+        <button class="btn btn-primary" onclick="abrirModal()">+ Nueva prenda</button>
+      </div>
     </header>
     <div class="page-content">
       <div class="filter-bar">
         <input type="search" id="buscar" placeholder="Buscar prenda..." oninput="filtrar()" style="max-width:240px">
-        <select id="filtro-tipo" onchange="filtrar()" style="max-width:160px">
-          <option value="">Todas las prendas</option>
-          <option>Campera</option><option>Buzo</option><option>Pantalón</option><option>Remera</option>
-        </select>
+        <select id="filtro-tipo" onchange="filtrar()" style="max-width:160px"><option value="">Todos los tipos</option></select>
       </div>
-      <div class="inv-grid" id="inv-grid">
-        <p style="color:var(--text-3);text-align:center;padding:40px;grid-column:1/-1">Cargando...</p>
+      <div class="card" style="margin:0;padding:0;overflow:hidden">
+        <table class="table">
+          <thead><tr><th>Prenda</th><th>Talle</th><th>Color</th><th>Precio</th><th>Stock</th><th>Reservado</th><th style="width:160px"></th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
       </div>
     </div>
   </main>
 </div>
 
-<!-- MODAL NUEVA PRENDA -->
-<div class="modal-overlay" id="modal">
+<!-- MODAL PRENDA -->
+<div class="modal-overlay" id="modal-prenda">
   <div class="modal">
-    <div class="modal-title">Nueva prenda</div>
+    <div class="modal-title" id="prenda-titulo">Nueva prenda</div>
+    <input type="hidden" id="p-id">
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">Tipo *</label>
-        <select id="p-nombre"><option>Campera</option><option>Buzo</option><option>Pantalón</option><option>Remera</option><option>Otro</option></select>
+      <div class="form-group"><label class="form-label">Tipo de prenda *</label>
+        <select id="p-tipo"><option value="">Seleccionar...</option></select>
       </div>
       <div class="form-group"><label class="form-label">Talle *</label>
-        <select id="p-talle"><option>T2</option><option>T4</option><option>T6</option><option>T8</option><option>T10</option><option>T12</option><option>T14</option><option>T16</option><option>XS</option><option>S</option><option>M</option><option>L</option><option>XL</option><option>XXL</option></select>
+        <input type="text" id="p-talle" placeholder="T12, T14, XL...">
       </div>
     </div>
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">Color</label><input type="text" id="p-color" placeholder="Azul"></div>
-      <div class="form-group"><label class="form-label">Stock inicial *</label><input type="number" id="p-stock" value="10" min="0"></div>
+      <div class="form-group"><label class="form-label">Color</label><input type="text" id="p-color" placeholder="Azul, Gris..."></div>
+      <div class="form-group"><label class="form-label">Precio ($) *</label><input type="number" id="p-precio" min="0"></div>
     </div>
-    <div class="form-group"><label class="form-label">Precio ($) *</label><input type="number" id="p-precio" placeholder="8500"></div>
+    <div class="form-group"><label class="form-label">Stock inicial</label><input type="number" id="p-stock" min="0" value="0"></div>
     <div class="modal-footer">
-      <button class="btn" onclick="cerrarModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardar()">Guardar prenda</button>
+      <button class="btn" onclick="cerrar('modal-prenda')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarPrenda()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ABM TIPOS PRENDA -->
+<div class="modal-overlay" id="modal-tipos">
+  <div class="modal">
+    <div class="modal-title">Tipos de prenda</div>
+    <div id="lista-tipos" style="margin-bottom:14px"></div>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="nuevo-tipo" placeholder="Nueva tipo (ej: Bermuda)..." style="flex:1">
+      <button class="btn btn-primary" onclick="agregarTipo()">Agregar</button>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="cerrar('modal-tipos')">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR PRECIO/STOCK -->
+<div class="modal-overlay" id="modal-precio">
+  <div class="modal">
+    <div class="modal-title" id="precio-titulo">Editar prenda</div>
+    <input type="hidden" id="ep-id">
+    <div class="form-group"><label class="form-label">Precio ($)</label><input type="number" id="ep-precio" min="0"></div>
+    <div class="form-group"><label class="form-label">Stock</label><input type="number" id="ep-stock" min="0"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="cerrar('modal-precio')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarPrecioStock()">Guardar</button>
     </div>
   </div>
 </div>
@@ -58,80 +88,117 @@
 <script src="/static/api.js"></script>
 <script src="/static/sidebar.js"></script>
 <script>
-var todasPrendas = [];
+var prendas=[], tipos=[];
 
-function fmt(n){ return Number(n).toLocaleString('es-AR'); }
-function stockClass(s,r){ var d=s-r; if(d<=0) return 'stock-out'; if(d<=2) return 'stock-low'; return 'stock-ok'; }
-function stockLabel(s,r){ var d=s-r; if(d<=0) return 'Sin stock'; return d+' disponibles'; }
+function fmt(n){return Number(n||0).toLocaleString('es-AR');}
 
-async function cargar(){
-  try {
-    todasPrendas = await API.get('/api/prendas');
-    filtrar();
-  } catch(e){ showToast(e.message,'error'); }
+async function init(){
+  [tipos,prendas]=await Promise.all([API.get('/api/tipos-prenda'),API.get('/api/prendas')]);
+  poblarFiltroTipo(); poblarSelectTipo(); filtrar();
+}
+
+function poblarFiltroTipo(){
+  var sel=document.getElementById('filtro-tipo');
+  sel.innerHTML='<option value="">Todos los tipos</option>';
+  tipos.filter(t=>t.activo).forEach(t=>sel.innerHTML+=`<option value="${t.nombre}">${t.nombre}</option>`);
+}
+function poblarSelectTipo(){
+  var sel=document.getElementById('p-tipo');
+  sel.innerHTML='<option value="">Seleccionar...</option>';
+  tipos.filter(t=>t.activo).forEach(t=>sel.innerHTML+=`<option value="${t.nombre}">${t.nombre}</option>`);
 }
 
 function filtrar(){
   var q=document.getElementById('buscar').value.toLowerCase();
   var tipo=document.getElementById('filtro-tipo').value;
-  var data=todasPrendas.filter(p=>
-    (p.nombre+' '+p.talle+' '+p.color).toLowerCase().includes(q) &&
+  var data=prendas.filter(p=>
+    (p.nombre+' '+p.talle+' '+p.color).toLowerCase().includes(q)&&
     (!tipo||p.nombre===tipo)
   );
   render(data);
 }
 
 function render(data){
-  var g = document.getElementById('inv-grid');
-  if(!data.length){ g.innerHTML='<p style="color:var(--text-3);text-align:center;padding:40px;grid-column:1/-1">Sin resultados</p>'; return; }
-  g.innerHTML = data.map(p=>`
-    <div class="inv-card">
-      <div class="inv-card-name">${p.nombre}</div>
-      <div class="inv-card-detail">Talle ${p.talle} · ${p.color||'Sin color'}</div>
-      <div class="inv-card-price">$${fmt(p.precio)}</div>
-      <div class="inv-card-stock">
-        <span class="stock-pill ${stockClass(p.stock,p.reservado)}">${stockLabel(p.stock,p.reservado)}</span>
-        <span style="font-size:11px;color:var(--text-3)">${p.reservado} reserv.</span>
-      </div>
-      <div style="display:flex;gap:6px;margin-top:12px">
-        <button class="btn btn-sm btn-primary" style="flex:1" onclick="window.location='reservas.html'">Reservar</button>
-        <button class="btn btn-sm" onclick="ajustarStock(${p.id},${p.stock})">Ajustar stock</button>
-      </div>
+  document.getElementById('tbody').innerHTML=data.length
+    ?data.map(p=>`<tr>
+        <td><strong>${p.nombre}</strong></td><td>${p.talle}</td><td>${p.color||'–'}</td>
+        <td><strong>$${fmt(p.precio)}</strong></td>
+        <td><span style="font-weight:700;color:${p.stock>0?'var(--green)':'var(--red)'}">${p.stock}</span></td>
+        <td>${p.reservado||0}</td>
+        <td style="display:flex;gap:4px">
+          <button class="btn btn-sm" onclick="editarPrecioStock(${p.id},'${p.nombre} ${p.talle}',${p.precio},${p.stock})">✏️ Editar</button>
+        </td>
+      </tr>`).join('')
+    :'<tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:32px">Sin prendas</td></tr>';
+}
+
+function abrirModal(){
+  document.getElementById('p-id').value='';
+  document.getElementById('prenda-titulo').textContent='Nueva prenda';
+  ['p-talle','p-color','p-precio'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('p-stock').value='0';
+  document.getElementById('p-tipo').value='';
+  document.getElementById('modal-prenda').classList.add('open');
+}
+async function guardarPrenda(){
+  var nombre=document.getElementById('p-tipo').value;
+  var talle=document.getElementById('p-talle').value.trim();
+  var precio=document.getElementById('p-precio').value;
+  if(!nombre||!talle||!precio){showToast('Completá los campos obligatorios','error');return;}
+  try{
+    await API.post('/api/prendas',{nombre,talle,color:document.getElementById('p-color').value,stock:parseInt(document.getElementById('p-stock').value)||0,precio:parseFloat(precio)});
+    cerrar('modal-prenda'); prendas=await API.get('/api/prendas'); filtrar(); showToast('Prenda guardada');
+  }catch(e){showToast(e.message,'error');}
+}
+
+function editarPrecioStock(id,nombre,precio,stock){
+  document.getElementById('ep-id').value=id;
+  document.getElementById('precio-titulo').textContent='Editar: '+nombre;
+  document.getElementById('ep-precio').value=precio;
+  document.getElementById('ep-stock').value=stock;
+  document.getElementById('modal-precio').classList.add('open');
+}
+async function guardarPrecioStock(){
+  var id=document.getElementById('ep-id').value;
+  var precio=parseFloat(document.getElementById('ep-precio').value)||0;
+  var stock=parseInt(document.getElementById('ep-stock').value)||0;
+  try{
+    // Actualizar precio via PUT y stock via PATCH
+    var p=prendas.find(x=>x.id==id);
+    await API.put('/api/prendas/'+id,{nombre:p.nombre,talle:p.talle,color:p.color,stock,precio});
+    cerrar('modal-precio'); prendas=await API.get('/api/prendas'); filtrar(); showToast('Prenda actualizada');
+  }catch(e){showToast(e.message,'error');}
+}
+
+// ABM Tipos
+async function abrirABMTipos(){
+  await recargarTipos();
+  document.getElementById('modal-tipos').classList.add('open');
+}
+async function recargarTipos(){
+  tipos=await API.get('/api/tipos-prenda');
+  poblarFiltroTipo(); poblarSelectTipo();
+  document.getElementById('lista-tipos').innerHTML=tipos.map(t=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px">${t.nombre}</span>
+      <button class="btn btn-sm" style="color:var(--red)" onclick="borrarTipo(${t.id},'${t.nombre}')">Eliminar</button>
     </div>`).join('');
 }
-
-function abrirModal(){ document.getElementById('modal').classList.add('open'); }
-function cerrarModal(){ document.getElementById('modal').classList.remove('open'); }
-
-async function guardar(){
-  var pr=parseInt(document.getElementById('p-precio').value)||0;
-  if(!pr){ showToast('Ingresá el precio','error'); return; }
-  try {
-    await API.post('/api/prendas',{
-      nombre:document.getElementById('p-nombre').value,
-      talle:document.getElementById('p-talle').value,
-      color:document.getElementById('p-color').value||'Sin color',
-      stock:parseInt(document.getElementById('p-stock').value)||0,
-      precio:pr
-    });
-    cerrarModal();
-    cargar();
-    showToast('Prenda agregada al inventario');
-  } catch(e){ showToast(e.message,'error'); }
+async function agregarTipo(){
+  var n=document.getElementById('nuevo-tipo').value.trim();
+  if(!n){showToast('Ingresá un nombre','error');return;}
+  try{await API.post('/api/tipos-prenda',{nombre:n});document.getElementById('nuevo-tipo').value='';recargarTipos();showToast('Tipo agregado');}
+  catch(e){showToast(e.message,'error');}
+}
+async function borrarTipo(id,nombre){
+  if(!confirm('¿Eliminar tipo "'+nombre+'"?')) return;
+  try{await API.delete('/api/tipos-prenda/'+id);recargarTipos();showToast('Tipo eliminado');}
+  catch(e){showToast(e.message,'error');}
 }
 
-async function ajustarStock(id, stockActual){
-  var n = prompt('Nuevo stock total (actual: '+stockActual+'):', stockActual);
-  if(n===null || isNaN(parseInt(n))) return;
-  try {
-    await API.patch('/api/prendas/'+id+'/stock', {stock:Math.max(0,parseInt(n))});
-    cargar();
-    showToast('Stock actualizado');
-  } catch(e){ showToast(e.message,'error'); }
-}
-
-document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)cerrarModal();});
-cargar();
+function cerrar(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');}));
+init();
 </script>
 </body>
 </html>

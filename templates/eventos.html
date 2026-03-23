@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Eventos – Cooperadora Escolar</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
@@ -16,43 +15,38 @@
 .ev-precio-item{font-size:12px;color:var(--text-3)}
 .ev-precio-item strong{display:block;font-size:15px;font-weight:700;color:var(--text)}
 .ev-stats{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px}
-.ev-stat{font-size:11px;color:var(--text-3);text-align:center}
+.ev-stat{font-size:11px;color:var(--text-3);text-align:center;min-width:60px}
 .ev-stat strong{display:block;font-size:18px;font-weight:800;font-family:'Syne',sans-serif;color:var(--text)}
-.ev-stat.green strong{color:var(--green)}
-.ev-stat.amber strong{color:var(--amber)}
-.ev-stat.blue strong{color:var(--blue)}
-.ev-stat.purple strong{color:#8b5cf6}
+.ev-stat.green strong{color:var(--green)}.ev-stat.amber strong{color:var(--amber)}
+.ev-stat.blue strong{color:var(--blue)}.ev-stat.purple strong{color:#8b5cf6}
 .ev-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
-.tabs-inner{display:flex;gap:2px;background:var(--surface-2);border-radius:8px;padding:3px;margin-bottom:12px;width:fit-content}
-.tab-inner{padding:5px 14px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-3)}
-.tab-inner.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
-/* Grilla de tarjetas numeradas */
-.tarjetas-grid{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
-.tarj-chip{width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;cursor:pointer;border:2px solid transparent;transition:.15s;user-select:none}
-.tarj-chip.libre{background:var(--surface-2);border-color:var(--border);color:var(--text-3)}
-.tarj-chip.libre:hover{border-color:var(--blue);color:var(--blue)}
-.tarj-chip.venta{background:rgba(16,185,129,.15);border-color:var(--green);color:var(--green)}
-.tarj-chip.ganancia{background:rgba(245,158,11,.15);border-color:var(--amber);color:var(--amber)}
-.tarj-chip.seleccionado{outline:3px solid var(--blue);outline-offset:1px}
-.leyenda{display:flex;gap:12px;font-size:11px;margin-bottom:8px;flex-wrap:wrap}
-.leyenda span{display:flex;align-items:center;gap:4px}
-.dot{width:10px;height:10px;border-radius:3px}
-.entrega-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface-2);border-radius:8px;margin-bottom:6px}
-.entrega-info{font-size:13px}
+.entrega-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface-2);border-radius:8px;margin-bottom:6px;gap:8px;flex-wrap:wrap}
+.entrega-info{font-size:13px;flex:1}
 .entrega-num{font-size:11px;color:var(--text-3);margin-top:1px}
-/* Reporte */
-.rpt-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:12px 0}
-@media(min-width:500px){.rpt-grid{grid-template-columns:repeat(4,1fr)}}
-.rpt-stat{background:var(--surface-2);border-radius:8px;padding:12px;text-align:center}
-.rpt-stat .val{font-size:20px;font-weight:800;font-family:'Syne',sans-serif}
-.rpt-stat .lbl{font-size:11px;color:var(--text-3);margin-top:2px}
-.rpt-stat.green .val{color:var(--green)}
-.rpt-stat.amber .val{color:var(--amber)}
-.rpt-stat.blue .val{color:var(--blue)}
-.rpt-stat.purple .val{color:#8b5cf6}
-.nums-pendientes{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
-.num-badge{padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;background:rgba(245,158,11,.15);color:var(--amber)}
-.num-badge.rendido{background:rgba(16,185,129,.12);color:var(--green)}
+/* Tarjetas grilla */
+.tarj-grid{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0}
+.tarj{width:48px;height:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;cursor:pointer;border:2px solid transparent;transition:.12s;user-select:none;position:relative}
+.tarj.libre{background:var(--surface-2);border-color:var(--border);color:var(--text-3)}
+.tarj.venta{background:rgba(30,125,75,.14);border-color:var(--green);color:var(--green)}
+.tarj.ganancia{background:rgba(180,83,9,.13);border-color:var(--amber);color:var(--amber)}
+.tarj:hover{transform:scale(1.08)}
+.tarj .tipo-ico{position:absolute;top:1px;right:2px;font-size:8px}
+.rend-modo{display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap}
+.modo-btn{padding:7px 16px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid transparent;transition:.15s}
+.modo-btn.venta{background:rgba(30,125,75,.1);border-color:var(--green);color:var(--green)}
+.modo-btn.venta.activo{background:var(--green);color:#fff}
+.modo-btn.ganancia{background:rgba(180,83,9,.1);border-color:var(--amber);color:var(--amber)}
+.modo-btn.ganancia.activo{background:var(--amber);color:#fff}
+.modo-btn.desmarcar{background:rgba(192,57,43,.08);border-color:var(--red);color:var(--red)}
+.modo-btn.desmarcar.activo{background:var(--red);color:#fff}
+.modo-hint{font-size:12px;color:var(--text-3);margin-top:6px}
+.leyenda{display:flex;gap:12px;font-size:11px;margin-bottom:8px;flex-wrap:wrap;align-items:center}
+.leyenda span{display:flex;align-items:center;gap:4px}
+.dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+/* Num input libre */
+.num-input-area{min-height:44px;border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-size:13px;cursor:text;display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.num-tag{background:var(--blue-light);color:var(--blue);border-radius:4px;padding:2px 8px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:4px}
+.num-tag button{background:none;border:none;cursor:pointer;color:var(--blue);font-size:14px;line-height:1;padding:0}
 </style>
 </head>
 <body>
@@ -60,7 +54,10 @@
   <main class="main-content">
     <header class="topbar">
       <div><h1 class="page-title">Eventos</h1><p class="page-subtitle">Gestión de tarjetas y rendiciones</p></div>
-      <div class="topbar-actions"><button class="btn btn-primary" onclick="abrirNuevoEvento()">+ Nuevo evento</button></div>
+      <div class="topbar-actions">
+        <button class="btn" onclick="abrirABMTipos()">⚙️ Tipos de evento</button>
+        <button class="btn btn-primary" onclick="abrirNuevoEvento()">+ Nuevo evento</button>
+      </div>
     </header>
     <div class="page-content">
       <div id="lista-eventos"><p style="color:var(--text-3);text-align:center;padding:40px">Cargando...</p></div>
@@ -73,84 +70,89 @@
   <div class="modal">
     <div class="modal-title" id="ev-modal-titulo">Nuevo evento</div>
     <input type="hidden" id="ev-id">
-    <div class="form-group"><label class="form-label">Nombre del evento *</label><input type="text" id="ev-nombre" placeholder="Ej: Rifa anual"></div>
+    <div class="form-group"><label class="form-label">Nombre *</label><input type="text" id="ev-nombre"></div>
     <div class="form-grid">
       <div class="form-group"><label class="form-label">Fecha</label><input type="text" id="ev-fecha" placeholder="25/05/2026"></div>
-      <div class="form-group"><label class="form-label">Tipo</label>
-        <select id="ev-tipo"><option>Rifas</option><option>Venta de comida</option><option>Venta de productos</option><option>Sorteo</option><option>Otro</option></select>
-      </div>
+      <div class="form-group"><label class="form-label">Tipo</label><select id="ev-tipo"></select></div>
     </div>
-    <div class="form-group"><label class="form-label">Descripción</label><input type="text" id="ev-desc" placeholder="Descripción del evento"></div>
+    <div class="form-group"><label class="form-label">Descripción</label><input type="text" id="ev-desc"></div>
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">💰 Precio de la tarjeta ($)</label><input type="number" id="ev-precio" placeholder="5000" min="0"></div>
-      <div class="form-group"><label class="form-label">✨ Ganancia por tarjeta ($)</label><input type="number" id="ev-ganancia" placeholder="2000" min="0"></div>
+      <div class="form-group"><label class="form-label">💰 Precio tarjeta ($)</label><input type="number" id="ev-precio" min="0"></div>
+      <div class="form-group"><label class="form-label">✨ Ganancia por tarjeta ($)</label><input type="number" id="ev-ganancia" min="0"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Estado</label>
+      <select id="ev-estado"><option value="Proximo">Próximo</option><option value="Activo">Activo</option><option value="Finalizado">Finalizado</option></select>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="cerrar('modal-evento')">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarEvento()">Guardar evento</button>
+      <button class="btn btn-primary" onclick="guardarEvento()">Guardar</button>
     </div>
+  </div>
+</div>
+
+<!-- MODAL ABM TIPOS EVENTO -->
+<div class="modal-overlay" id="modal-tipos-ev">
+  <div class="modal">
+    <div class="modal-title">Tipos de evento</div>
+    <div id="lista-tipos-ev" style="margin-bottom:14px"></div>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="nuevo-tipo-ev" placeholder="Nuevo tipo..." style="flex:1">
+      <button class="btn btn-primary" onclick="agregarTipoEv()">Agregar</button>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="cerrar('modal-tipos-ev')">Cerrar</button></div>
   </div>
 </div>
 
 <!-- MODAL ENTREGAR TARJETAS -->
 <div class="modal-overlay" id="modal-entrega">
-  <div class="modal">
-    <div class="modal-title">Entregar tarjetas a alumno</div>
+  <div class="modal" style="max-width:540px">
+    <div class="modal-title" id="ent-titulo">Entregar tarjetas</div>
     <input type="hidden" id="ent-evento-id">
+    <input type="hidden" id="ent-entrega-id">
     <div class="form-group"><label class="form-label">Alumno *</label>
       <select id="ent-alumno"><option value="">Seleccionar alumno...</option></select>
     </div>
-    <div class="form-grid">
-      <div class="form-group"><label class="form-label">Tarjeta N° desde *</label><input type="number" id="ent-desde" min="1" placeholder="1" oninput="calcCantidad()"></div>
-      <div class="form-group"><label class="form-label">Tarjeta N° hasta *</label><input type="number" id="ent-hasta" min="1" placeholder="10" oninput="calcCantidad()"></div>
+    <div class="form-group">
+      <label class="form-label">Números de tarjeta (ingresá y presioná Enter o coma)</label>
+      <div class="num-input-area" id="num-tags" onclick="focusNumInput()"></div>
+      <input type="number" id="num-input" min="1" style="margin-top:6px;width:120px" placeholder="Número..." onkeydown="addNumOnKey(event)">
+      <button class="btn btn-sm" onclick="addNum()" style="margin-left:6px">+ Agregar</button>
     </div>
-    <div id="ent-preview" style="font-size:13px;color:var(--text-3);margin-bottom:4px"></div>
+    <div id="ent-resumen" style="font-size:13px;color:var(--text-3);margin-top:4px"></div>
     <div class="modal-footer">
       <button class="btn" onclick="cerrar('modal-entrega')">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmarEntrega()">Entregar tarjetas</button>
+      <button class="btn btn-primary" onclick="confirmarEntrega()">Confirmar entrega</button>
     </div>
   </div>
 </div>
 
 <!-- MODAL RENDICION -->
 <div class="modal-overlay" id="modal-rendicion">
-  <div class="modal" style="max-width:700px">
+  <div class="modal" style="max-width:680px">
     <div class="modal-title" id="rend-titulo">Rendición de tarjetas</div>
-    <div id="rend-alumno-info" style="font-size:13px;color:var(--text-3);margin-bottom:12px"></div>
+    <div id="rend-info" style="font-size:12px;color:var(--text-3);margin-bottom:10px"></div>
+
+    <div class="rend-modo">
+      <span style="font-size:13px;font-weight:600">Modo de clic:</span>
+      <button class="modo-btn venta activo" id="btn-modo-venta" onclick="setModo('venta')">✅ Marcar como venta</button>
+      <button class="modo-btn ganancia" id="btn-modo-ganancia" onclick="setModo('ganancia')">💰 Marcar como ganancia</button>
+      <button class="modo-btn desmarcar" id="btn-modo-desmarcar" onclick="setModo('desmarcar')">✕ Desmarcar</button>
+    </div>
+    <div class="modo-hint" id="modo-hint">Hacé clic en los números para marcarlos como <strong>venta</strong></div>
 
     <div class="leyenda">
-      <span><div class="dot" style="background:var(--surface-2);border:1.5px solid var(--border)"></div> Sin rendir</span>
-      <span><div class="dot" style="background:rgba(16,185,129,.2);border:1.5px solid var(--green)"></div> Rendida – Venta</span>
-      <span><div class="dot" style="background:rgba(245,158,11,.2);border:1.5px solid var(--amber)"></div> Rendida – Ganancia</span>
+      <span><div class="dot" style="background:var(--surface-2);border:1.5px solid var(--border)"></div>Sin rendir</span>
+      <span><div class="dot" style="background:rgba(30,125,75,.2);border:1.5px solid var(--green)"></div>Venta</span>
+      <span><div class="dot" style="background:rgba(180,83,9,.16);border:1.5px solid var(--amber)"></div>Ganancia</span>
     </div>
 
-    <div class="tarjetas-grid" id="rend-grid"></div>
+    <div class="tarj-grid" id="rend-grid"></div>
 
-    <div id="rend-seleccion" style="display:none;margin-top:14px;padding:14px;background:var(--surface-2);border-radius:8px">
-      <div style="font-size:13px;font-weight:600;margin-bottom:10px">Marcar tarjetas seleccionadas como:</div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <select id="rend-forma" style="max-width:160px">
-          <option>Efectivo</option><option>Débito</option><option>Transferencia</option>
-        </select>
-        <button class="btn btn-primary" onclick="rendirSeleccionados('venta')">✅ Rendida por venta</button>
-        <button class="btn" style="background:rgba(245,158,11,.15);color:var(--amber);border-color:var(--amber)" onclick="rendirSeleccionados('ganancia')">💰 Rendida por ganancia</button>
-        <button class="btn" onclick="desmarcarSeleccionados()" style="color:var(--red)">✕ Desmarcar</button>
-      </div>
-      <div id="rend-seleccion-info" style="font-size:12px;color:var(--text-3);margin-top:6px"></div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:12px;flex-wrap:wrap">
+      <select id="rend-forma" style="max-width:160px"><option>Efectivo</option><option>Débito</option><option>Transferencia</option></select>
+      <span id="rend-resumen" style="font-size:13px;color:var(--text-3);align-self:center"></span>
     </div>
-
-    <div class="modal-footer" style="margin-top:16px">
-      <button class="btn" onclick="cerrar('modal-rendicion')">Cerrar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL REPORTE -->
-<div class="modal-overlay" id="modal-reporte">
-  <div class="modal" style="max-width:700px">
-    <div class="modal-title" id="rpt-titulo">Reporte del evento</div>
-    <div id="rpt-body"></div>
-    <div class="modal-footer"><button class="btn" onclick="cerrar('modal-reporte')">Cerrar</button></div>
+    <div class="modal-footer"><button class="btn" onclick="cerrar('modal-rendicion');cargarEventos()">Cerrar y guardar</button></div>
   </div>
 </div>
 
@@ -158,101 +160,118 @@
 <script src="/static/api.js"></script>
 <script src="/static/sidebar.js"></script>
 <script>
-var alumnosLista = [];
-var eventoEnRendicion = null;
-var tarjetasEnRendicion = [];
-var seleccionados = new Set();
+var alumnosLista=[], tiposEvento=[], eventoEnRendicion=null, tarjetasEnRendicion=[];
+var modoRendicion='venta'; // 'venta' | 'ganancia' | 'desmarcar'
+var numTagsActuales=[];
 
-function fmt(n){ return Number(n||0).toLocaleString('es-AR'); }
-
+function fmt(n){return Number(n||0).toLocaleString('es-AR');}
 function badgeEstado(e){
   if(e==='Activo') return '<span class="badge badge-green">Activo</span>';
   if(e==='Proximo'||e==='Próximo') return '<span class="badge badge-blue">Próximo</span>';
   return '<span class="badge badge-amber">Finalizado</span>';
 }
 
-async function cargarAlumnos(){
-  alumnosLista = await API.get('/api/alumnos');
-  var sel = document.getElementById('ent-alumno');
-  sel.innerHTML = '<option value="">Seleccionar alumno...</option>';
-  alumnosLista.forEach(a => sel.innerHTML += `<option value="${a.id}">${a.apellido}, ${a.nombre} (${a.anio})</option>`);
+async function init(){
+  [alumnosLista,tiposEvento]=await Promise.all([API.get('/api/alumnos'),API.get('/api/tipos-evento')]);
+  poblarSelectAlumnos(); poblarSelectTipoEv(); cargarEventos();
+}
+
+function poblarSelectAlumnos(){
+  var sel=document.getElementById('ent-alumno');
+  sel.innerHTML='<option value="">Seleccionar alumno...</option>';
+  alumnosLista.forEach(a=>sel.innerHTML+=`<option value="${a.id}">${a.apellido}, ${a.nombre} (${a.anio})</option>`);
+}
+function poblarSelectTipoEv(){
+  var sel=document.getElementById('ev-tipo');
+  sel.innerHTML='';
+  tiposEvento.forEach(t=>sel.innerHTML+=`<option value="${t.nombre}">${t.nombre}</option>`);
 }
 
 async function cargarEventos(){
-  try {
-    var evs = await API.get('/api/eventos');
-    renderEventos(evs);
-  } catch(e){ showToast(e.message,'error'); }
+  try{var evs=await API.get('/api/eventos');renderEventos(evs);}
+  catch(e){showToast(e.message,'error');}
 }
 
 function renderEventos(evs){
-  if(!evs.length){
-    document.getElementById('lista-eventos').innerHTML='<p style="color:var(--text-3);text-align:center;padding:40px">No hay eventos registrados.</p>';
-    return;
-  }
-  document.getElementById('lista-eventos').innerHTML = evs.map(ev => {
-    var s = ev.stats || {};
-    var pendientes = (s.total||0) - (s.rendidas||0);
-    var entregasHtml = ev.entregas.length
-      ? ev.entregas.map(e => `
-          <div class="entrega-row">
-            <div>
-              <div class="entrega-info"><strong>${e.alumno_txt}</strong></div>
-              <div class="entrega-num">Tarjetas ${e.tarjeta_desde} al ${e.tarjeta_hasta} · ${e.cantidad} tarjetas · ${e.tarjetas_rendidas||0}/${e.tarjetas_total||0} rendidas</div>
-            </div>
-            <div style="display:flex;gap:6px">
-              <button class="btn btn-sm btn-primary" onclick="abrirRendicion(${ev.id},${e.alumno_id})">Rendir</button>
-              <button class="btn btn-sm" onclick="eliminarEntrega(${ev.id},${e.id})" title="Eliminar entrega">✕</button>
-            </div>
-          </div>`).join('')
-      : '<p style="font-size:13px;color:var(--text-3)">Sin tarjetas entregadas aún.</p>';
-
+  if(!evs.length){document.getElementById('lista-eventos').innerHTML='<p style="color:var(--text-3);text-align:center;padding:40px">No hay eventos.</p>';return;}
+  document.getElementById('lista-eventos').innerHTML=evs.map(ev=>{
+    var s=ev.stats||{};var pend=(s.total||0)-(s.rendidas||0);
+    var entHtml=ev.entregas.length?ev.entregas.map(e=>`
+      <div class="entrega-row">
+        <div class="entrega-info">
+          <strong>${e.alumno_txt}</strong>
+          <div class="entrega-num">Tarjetas: ${JSON.parse(e.numeros_json||'[]').join(', ')||'–'} · ${e.tarjetas_rendidas||0}/${e.tarjetas_total||0} rendidas</div>
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          <button class="btn btn-sm btn-primary" onclick="abrirRendicion(${ev.id},${e.alumno_id})">🎟 Rendir</button>
+          <button class="btn btn-sm" onclick="abrirAgregarTarjetas(${ev.id},${e.id},'${e.alumno_txt}')">+ Tarjetas</button>
+          <button class="btn btn-sm" style="color:var(--red)" onclick="eliminarEntrega(${ev.id},${e.id})">✕</button>
+        </div>
+      </div>`).join('')
+      :'<p style="font-size:13px;color:var(--text-3)">Sin tarjetas entregadas.</p>';
     return `<div class="ev-card">
       <div class="ev-header">
-        <div>
-          <div class="ev-nombre">${ev.nombre}</div>
-          <div class="ev-meta">${ev.fecha||'Sin fecha'} · ${ev.tipo}${ev.descripcion?' · '+ev.descripcion:''}</div>
-        </div>
-        <div style="display:flex;gap:6px;align-items:center">
-          ${badgeEstado(ev.estado)}
-          <button class="btn btn-sm" onclick="editarEvento(${ev.id})">✏️</button>
-        </div>
+        <div><div class="ev-nombre">${ev.nombre}</div><div class="ev-meta">${ev.fecha||'Sin fecha'} · ${ev.tipo}${ev.descripcion?' · '+ev.descripcion:''}</div></div>
+        <div style="display:flex;gap:6px;align-items:center">${badgeEstado(ev.estado)}<button class="btn btn-sm" onclick="editarEvento(${ev.id})">✏️</button></div>
       </div>
       <div class="ev-precios">
         <div class="ev-precio-item"><strong>$${fmt(ev.precio_tarjeta)}</strong>Precio tarjeta</div>
-        <div class="ev-precio-item"><strong>$${fmt(ev.ganancia_tarjeta)}</strong>Ganancia por tarjeta</div>
-        <div class="ev-precio-item"><strong>$${fmt(ev.precio_tarjeta - ev.ganancia_tarjeta)}</strong>Costo tarjeta</div>
+        <div class="ev-precio-item"><strong>$${fmt(ev.ganancia_tarjeta)}</strong>Ganancia</div>
+        <div class="ev-precio-item"><strong>$${fmt(ev.precio_tarjeta-ev.ganancia_tarjeta)}</strong>Costo</div>
       </div>
       <div class="ev-stats">
         <div class="ev-stat blue"><strong>${s.total||0}</strong>Entregadas</div>
         <div class="ev-stat green"><strong>${s.rendidas||0}</strong>Rendidas</div>
-        <div class="ev-stat amber"><strong>${pendientes}</strong>Pendientes</div>
+        <div class="ev-stat amber"><strong>${pend}</strong>Pendientes</div>
         <div class="ev-stat green"><strong>$${fmt(s.monto_rendido)}</strong>Recaudado</div>
-        <div class="ev-stat purple"><strong>${s.por_venta||0}</strong>Por venta</div>
-        <div class="ev-stat amber"><strong>${s.por_ganancia||0}</strong>Por ganancia</div>
+        <div class="ev-stat purple"><strong>${s.por_venta||0}</strong>Ventas</div>
+        <div class="ev-stat amber"><strong>${s.por_ganancia||0}</strong>Ganancias</div>
       </div>
-      <div style="margin-bottom:10px">${entregasHtml}</div>
+      ${entHtml}
       <div class="ev-actions">
         <button class="btn btn-sm btn-primary" onclick="abrirEntrega(${ev.id})">🎟️ Entregar tarjetas</button>
-        <button class="btn btn-sm" onclick="verReporte(${ev.id})">📊 Reporte</button>
+        <a href="reporte_evento.html?id=${ev.id}" target="_blank" class="btn btn-sm">📊 Ver reporte</a>
       </div>
     </div>`;
   }).join('');
 }
 
-// ── Nuevo / Editar Evento ────────────────────────────────────────────────────
+// ── ABM Tipos Evento ────────────────────────────────────────────────────────
+async function abrirABMTipos(){
+  await recargarTiposEv();
+  document.getElementById('modal-tipos-ev').classList.add('open');
+}
+async function recargarTiposEv(){
+  tiposEvento=await API.get('/api/tipos-evento');
+  poblarSelectTipoEv();
+  document.getElementById('lista-tipos-ev').innerHTML=tiposEvento.map(t=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px">${t.nombre}</span>
+      <button class="btn btn-sm" style="color:var(--red)" onclick="borrarTipoEv(${t.id},'${t.nombre}')">Eliminar</button>
+    </div>`).join('');
+}
+async function agregarTipoEv(){
+  var n=document.getElementById('nuevo-tipo-ev').value.trim();
+  if(!n){showToast('Ingresá un nombre','error');return;}
+  try{await API.post('/api/tipos-evento',{nombre:n});document.getElementById('nuevo-tipo-ev').value='';recargarTiposEv();showToast('Tipo agregado');}
+  catch(e){showToast(e.message,'error');}
+}
+async function borrarTipoEv(id,nombre){
+  if(!confirm('¿Eliminar tipo "'+nombre+'"?')) return;
+  try{await API.delete('/api/tipos-evento/'+id);recargarTiposEv();showToast('Tipo eliminado');}
+  catch(e){showToast(e.message,'error');}
+}
 
+// ── Crear / Editar Evento ───────────────────────────────────────────────────
 function abrirNuevoEvento(){
   document.getElementById('ev-id').value='';
   document.getElementById('ev-modal-titulo').textContent='Nuevo evento';
   ['ev-nombre','ev-fecha','ev-desc','ev-precio','ev-ganancia'].forEach(i=>document.getElementById(i).value='');
-  document.getElementById('ev-tipo').value='Rifas';
+  document.getElementById('ev-estado').value='Proximo';
   document.getElementById('modal-evento').classList.add('open');
 }
-
 async function editarEvento(id){
-  var evs = await API.get('/api/eventos');
-  var ev = evs.find(e=>e.id===id); if(!ev) return;
+  var evs=await API.get('/api/eventos'); var ev=evs.find(e=>e.id===id); if(!ev) return;
   document.getElementById('ev-id').value=id;
   document.getElementById('ev-modal-titulo').textContent='Editar evento';
   document.getElementById('ev-nombre').value=ev.nombre;
@@ -261,214 +280,148 @@ async function editarEvento(id){
   document.getElementById('ev-desc').value=ev.descripcion||'';
   document.getElementById('ev-precio').value=ev.precio_tarjeta||'';
   document.getElementById('ev-ganancia').value=ev.ganancia_tarjeta||'';
+  document.getElementById('ev-estado').value=ev.estado;
   document.getElementById('modal-evento').classList.add('open');
 }
-
 async function guardarEvento(){
-  var id = document.getElementById('ev-id').value;
-  var body = {
-    nombre: document.getElementById('ev-nombre').value.trim(),
-    fecha: document.getElementById('ev-fecha').value,
-    tipo: document.getElementById('ev-tipo').value,
-    descripcion: document.getElementById('ev-desc').value,
-    precio_tarjeta: parseFloat(document.getElementById('ev-precio').value)||0,
-    ganancia_tarjeta: parseFloat(document.getElementById('ev-ganancia').value)||0,
-  };
-  if(!body.nombre){ showToast('Ingresá el nombre del evento','error'); return; }
-  try {
-    if(id) await API.put('/api/eventos/'+id, body);
-    else await API.post('/api/eventos', body);
-    cerrar('modal-evento');
-    cargarEventos();
-    showToast(id?'Evento actualizado':'Evento creado');
-  } catch(e){ showToast(e.message,'error'); }
+  var id=document.getElementById('ev-id').value;
+  var body={nombre:document.getElementById('ev-nombre').value.trim(),fecha:document.getElementById('ev-fecha').value,
+    tipo:document.getElementById('ev-tipo').value,descripcion:document.getElementById('ev-desc').value,
+    estado:document.getElementById('ev-estado').value,
+    precio_tarjeta:parseFloat(document.getElementById('ev-precio').value)||0,
+    ganancia_tarjeta:parseFloat(document.getElementById('ev-ganancia').value)||0};
+  if(!body.nombre){showToast('Nombre requerido','error');return;}
+  try{
+    if(id) await API.put('/api/eventos/'+id,body); else await API.post('/api/eventos',body);
+    cerrar('modal-evento');cargarEventos();showToast(id?'Evento actualizado':'Evento creado');
+  }catch(e){showToast(e.message,'error');}
 }
 
-// ── Entrega de Tarjetas ───────────────────────────────────────────────────────
-
+// ── Entrega de Tarjetas (números libres) ────────────────────────────────────
 function abrirEntrega(evId){
   document.getElementById('ent-evento-id').value=evId;
+  document.getElementById('ent-entrega-id').value='';
+  document.getElementById('ent-titulo').textContent='Entregar tarjetas';
+  document.getElementById('ent-alumno').disabled=false;
   document.getElementById('ent-alumno').value='';
-  document.getElementById('ent-desde').value='';
-  document.getElementById('ent-hasta').value='';
-  document.getElementById('ent-preview').textContent='';
+  numTagsActuales=[];
+  renderTags();
+  document.getElementById('num-input').value='';
+  document.getElementById('ent-resumen').textContent='';
   document.getElementById('modal-entrega').classList.add('open');
 }
-
-function calcCantidad(){
-  var d=parseInt(document.getElementById('ent-desde').value)||0;
-  var h=parseInt(document.getElementById('ent-hasta').value)||0;
-  if(d>0&&h>=d){
-    document.getElementById('ent-preview').textContent=`Se asignarán ${h-d+1} tarjetas (del ${d} al ${h})`;
-  } else {
-    document.getElementById('ent-preview').textContent='';
-  }
+function abrirAgregarTarjetas(evId,entregaId,alumnoTxt){
+  document.getElementById('ent-evento-id').value=evId;
+  document.getElementById('ent-entrega-id').value=entregaId;
+  document.getElementById('ent-titulo').textContent='Agregar tarjetas a '+alumnoTxt;
+  document.getElementById('ent-alumno').disabled=true;
+  numTagsActuales=[];
+  renderTags();
+  document.getElementById('num-input').value='';
+  document.getElementById('ent-resumen').textContent='';
+  document.getElementById('modal-entrega').classList.add('open');
 }
-
+function focusNumInput(){document.getElementById('num-input').focus();}
+function addNumOnKey(e){if(e.key==='Enter'||e.key===','){e.preventDefault();addNum();}}
+function addNum(){
+  var v=parseInt(document.getElementById('num-input').value);
+  if(!v||v<1){showToast('Ingresá un número válido','error');return;}
+  if(numTagsActuales.includes(v)){showToast('El número '+v+' ya está en la lista','error');return;}
+  numTagsActuales.push(v); numTagsActuales.sort((a,b)=>a-b);
+  document.getElementById('num-input').value='';
+  renderTags();
+}
+function removeNum(n){numTagsActuales=numTagsActuales.filter(x=>x!==n);renderTags();}
+function renderTags(){
+  var c=document.getElementById('num-tags');
+  c.innerHTML=numTagsActuales.map(n=>`<span class="num-tag">${n}<button onclick="removeNum(${n})">×</button></span>`).join('');
+  document.getElementById('ent-resumen').textContent=numTagsActuales.length?numTagsActuales.length+' tarjeta'+(numTagsActuales.length>1?'s':''):'';
+}
 async function confirmarEntrega(){
   var evId=parseInt(document.getElementById('ent-evento-id').value);
-  var alumnoId=document.getElementById('ent-alumno').value;
-  var desde=document.getElementById('ent-desde').value;
-  var hasta=document.getElementById('ent-hasta').value;
-  if(!alumnoId||!desde||!hasta){ showToast('Completá todos los campos','error'); return; }
-  try {
-    var r=await API.post('/api/eventos/'+evId+'/entregas', {alumno_id:parseInt(alumnoId), tarjeta_desde:parseInt(desde), tarjeta_hasta:parseInt(hasta)});
-    cerrar('modal-entrega');
-    cargarEventos();
-    showToast(`${r.cantidad} tarjetas entregadas`);
-  } catch(e){ showToast(e.message,'error'); }
+  var entregaId=document.getElementById('ent-entrega-id').value;
+  if(!numTagsActuales.length){showToast('Agregá al menos un número','error');return;}
+  try{
+    if(entregaId){
+      var r=await API.post('/api/eventos/'+evId+'/entregas/'+entregaId+'/agregar',{numeros:numTagsActuales});
+      showToast(r.agregadas+' tarjetas agregadas');
+    } else {
+      var alumnoId=document.getElementById('ent-alumno').value;
+      if(!alumnoId){showToast('Seleccioná un alumno','error');return;}
+      var r=await API.post('/api/eventos/'+evId+'/entregas',{alumno_id:parseInt(alumnoId),numeros:numTagsActuales});
+      showToast(r.cantidad+' tarjetas entregadas');
+    }
+    cerrar('modal-entrega');cargarEventos();
+  }catch(e){showToast(e.message,'error');}
+}
+async function eliminarEntrega(evId,entregaId){
+  if(!confirm('¿Eliminar esta entrega? Solo si no hay rendiciones.')) return;
+  try{await API.delete('/api/eventos/'+evId+'/entregas/'+entregaId);cargarEventos();showToast('Entrega eliminada');}
+  catch(e){showToast(e.message,'error');}
 }
 
-async function eliminarEntrega(evId, entregaId){
-  if(!confirm('¿Eliminar esta entrega? Solo se puede si no hay tarjetas rendidas.')) return;
-  try {
-    await API.delete('/api/eventos/'+evId+'/entregas/'+entregaId);
-    cargarEventos();
-    showToast('Entrega eliminada');
-  } catch(e){ showToast(e.message,'error'); }
+// ── Rendición (clic directo en tarjeta) ────────────────────────────────────
+function setModo(modo){
+  modoRendicion=modo;
+  ['venta','ganancia','desmarcar'].forEach(m=>{
+    document.getElementById('btn-modo-'+m).classList.toggle('activo',m===modo);
+  });
+  var hints={venta:'Hacé clic en los números para marcarlos como <strong>venta</strong> (precio completo)',
+    ganancia:'Hacé clic en los números para marcarlos como <strong>ganancia</strong>',
+    desmarcar:'Hacé clic en los números para <strong>desmarcarlos</strong>'};
+  document.getElementById('modo-hint').innerHTML=hints[modo];
 }
 
-// ── Rendición ─────────────────────────────────────────────────────────────────
-
-async function abrirRendicion(evId, alumnoId){
-  eventoEnRendicion = evId;
-  seleccionados = new Set();
-  try {
-    var tarjetas = await API.get('/api/eventos/'+evId+'/tarjetas?alumno_id='+alumnoId);
-    tarjetasEnRendicion = tarjetas;
-    var alumno = alumnosLista.find(a=>a.id===alumnoId);
-    var evs = await API.get('/api/eventos');
-    var ev = evs.find(e=>e.id===evId);
+async function abrirRendicion(evId,alumnoId){
+  eventoEnRendicion=evId;
+  try{
+    var [tarjetas,evs]=await Promise.all([API.get('/api/eventos/'+evId+'/tarjetas?alumno_id='+alumnoId),API.get('/api/eventos')]);
+    tarjetasEnRendicion=tarjetas;
+    var ev=evs.find(e=>e.id===evId);
+    var alumno=alumnosLista.find(a=>a.id===alumnoId);
     document.getElementById('rend-titulo').textContent='Rendición – '+(alumno?alumno.apellido+', '+alumno.nombre:'');
-    document.getElementById('rend-alumno-info').textContent=
-      'Evento: '+ev.nombre+' · Precio tarjeta: $'+fmt(ev.precio_tarjeta)+' · Ganancia: $'+fmt(ev.ganancia_tarjeta);
+    document.getElementById('rend-info').textContent='Evento: '+ev.nombre+' · Precio: $'+fmt(ev.precio_tarjeta)+' · Ganancia: $'+fmt(ev.ganancia_tarjeta);
+    setModo('venta');
     renderGrilla();
     document.getElementById('modal-rendicion').classList.add('open');
-  } catch(e){ showToast(e.message,'error'); }
+  }catch(e){showToast(e.message,'error');}
 }
 
 function renderGrilla(){
-  var grid = document.getElementById('rend-grid');
-  grid.innerHTML = tarjetasEnRendicion.map(t => {
-    var cls = t.rendida ? (t.tipo_rendicion==='venta'?'venta':'ganancia') : 'libre';
-    var sel = seleccionados.has(t.id) ? ' seleccionado' : '';
-    var title = t.rendida ? ('Rendida por '+t.tipo_rendicion+' – $'+fmt(t.monto_rendido)) : 'Sin rendir – clic para seleccionar';
-    return `<div class="tarj-chip ${cls}${sel}" title="${title}" onclick="toggleSeleccion(${t.id})">${t.numero}</div>`;
+  var rendidas=tarjetasEnRendicion.filter(t=>t.rendida);
+  var pendientes=tarjetasEnRendicion.filter(t=>!t.rendida);
+  document.getElementById('rend-resumen').textContent=
+    rendidas.length+' rendidas · '+pendientes.length+' pendientes';
+  document.getElementById('rend-grid').innerHTML=tarjetasEnRendicion.map(t=>{
+    var cls=t.rendida?(t.tipo_rendicion==='venta'?'venta':'ganancia'):'libre';
+    var ico=t.rendida?(t.tipo_rendicion==='venta'?'✅':'💰'):'';
+    return `<div class="tarj ${cls}" title="${t.rendida?'Rendida por '+t.tipo_rendicion+' – $'+fmt(t.monto_rendido):'Sin rendir'}" onclick="clickTarjeta(${t.id})">${t.numero}<span class="tipo-ico">${ico}</span></div>`;
   }).join('');
-  actualizarBarraSeleccion();
 }
 
-function toggleSeleccion(id){
-  var t = tarjetasEnRendicion.find(x=>x.id===id);
-  if(!t) return;
-  if(seleccionados.has(id)) seleccionados.delete(id);
-  else seleccionados.add(id);
-  renderGrilla();
-}
-
-function actualizarBarraSeleccion(){
-  var bar = document.getElementById('rend-seleccion');
-  var info = document.getElementById('rend-seleccion-info');
-  if(seleccionados.size>0){
-    bar.style.display='';
-    var nums = tarjetasEnRendicion.filter(t=>seleccionados.has(t.id)).map(t=>t.numero).join(', ');
-    info.textContent=seleccionados.size+' tarjeta'+(seleccionados.size>1?'s':'')+' seleccionada'+(seleccionados.size>1?'s':'')+': N° '+nums;
-  } else {
-    bar.style.display='none';
-  }
-}
-
-async function rendirSeleccionados(tipo){
-  if(!seleccionados.size){ showToast('Seleccioná al menos una tarjeta','error'); return; }
-  var forma = document.getElementById('rend-forma').value;
-  try {
-    await API.post('/api/eventos/'+eventoEnRendicion+'/tarjetas/rendir-lote', {
-      ids: Array.from(seleccionados), tipo_rendicion: tipo, forma_pago: forma
-    });
-    // Recargar tarjetas del alumno actual
-    var t0 = tarjetasEnRendicion[0];
-    var nuevas = await API.get('/api/eventos/'+eventoEnRendicion+'/tarjetas?alumno_id='+t0.alumno_id);
-    tarjetasEnRendicion = nuevas;
-    seleccionados = new Set();
-    renderGrilla();
-    cargarEventos();
-    var label = tipo==='venta' ? 'por venta' : 'por ganancia';
-    showToast('Tarjetas rendidas '+label);
-  } catch(e){ showToast(e.message,'error'); }
-}
-
-async function desmarcarSeleccionados(){
-  if(!seleccionados.size) return;
-  try {
-    for(var id of seleccionados){
-      await API.patch('/api/eventos/'+eventoEnRendicion+'/tarjetas/'+id+'/rendir', {rendida:false});
+async function clickTarjeta(tid){
+  var t=tarjetasEnRendicion.find(x=>x.id===tid); if(!t) return;
+  var forma=document.getElementById('rend-forma').value;
+  try{
+    if(modoRendicion==='desmarcar'){
+      await API.patch('/api/eventos/'+eventoEnRendicion+'/tarjetas/'+tid+'/rendir',{rendida:false});
+      t.rendida=0;t.tipo_rendicion=null;t.monto_rendido=0;
+    } else {
+      await API.patch('/api/eventos/'+eventoEnRendicion+'/tarjetas/'+tid+'/rendir',
+        {rendida:true,tipo_rendicion:modoRendicion,forma_pago:forma});
+      t.rendida=1;t.tipo_rendicion=modoRendicion;
     }
-    var t0 = tarjetasEnRendicion[0];
-    var nuevas = await API.get('/api/eventos/'+eventoEnRendicion+'/tarjetas?alumno_id='+t0.alumno_id);
-    tarjetasEnRendicion = nuevas;
-    seleccionados = new Set();
     renderGrilla();
-    cargarEventos();
-    showToast('Tarjetas desmarcadas');
-  } catch(e){ showToast(e.message,'error'); }
+  }catch(e){showToast(e.message,'error');}
 }
 
-// ── Reporte ───────────────────────────────────────────────────────────────────
-
-async function verReporte(evId){
-  try {
-    var r = await API.get('/api/eventos/'+evId+'/reporte');
-    document.getElementById('rpt-titulo').textContent='Reporte: '+r.evento.nombre;
-    var html='';
-    html+=`<div class="rpt-grid">
-      <div class="rpt-stat blue"><div class="val">${r.total_tarjetas_entregadas}</div><div class="lbl">Tarjetas entregadas</div></div>
-      <div class="rpt-stat green"><div class="val">${r.rendidas.cantidad}</div><div class="lbl">Rendidas</div></div>
-      <div class="rpt-stat amber"><div class="val">${r.pendientes.cantidad}</div><div class="lbl">Pendientes</div></div>
-      <div class="rpt-stat green"><div class="val">$${fmt(r.rendidas.monto_total)}</div><div class="lbl">Total recaudado</div></div>
-    </div>`;
-
-    html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-      <div style="background:rgba(16,185,129,.08);border:1px solid var(--green);border-radius:8px;padding:12px">
-        <div style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:4px">✅ Rendidas por venta</div>
-        <div style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif">${r.rendidas.por_venta.cantidad} tarjetas</div>
-        <div style="font-size:13px;color:var(--text-3)">$${fmt(r.rendidas.por_venta.monto)}</div>
-        ${r.rendidas.por_venta.numeros.length ? '<div class="nums-pendientes">'+r.rendidas.por_venta.numeros.map(n=>'<span class="num-badge rendido">'+n+'</span>').join('')+'</div>' : ''}
-      </div>
-      <div style="background:rgba(245,158,11,.08);border:1px solid var(--amber);border-radius:8px;padding:12px">
-        <div style="font-size:12px;color:var(--amber);font-weight:600;margin-bottom:4px">💰 Rendidas por ganancia</div>
-        <div style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif">${r.rendidas.por_ganancia.cantidad} tarjetas</div>
-        <div style="font-size:13px;color:var(--text-3)">$${fmt(r.rendidas.por_ganancia.monto)}</div>
-        ${r.rendidas.por_ganancia.numeros.length ? '<div class="nums-pendientes">'+r.rendidas.por_ganancia.numeros.map(n=>'<span class="num-badge">'+n+'</span>').join('')+'</div>' : ''}
-      </div>
-    </div>`;
-
-    if(r.pendientes.cantidad>0){
-      html+=`<div style="background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:12px;margin-bottom:14px">
-        <div style="font-size:12px;color:var(--red);font-weight:600;margin-bottom:8px">⏳ Pendientes de rendición (${r.pendientes.cantidad} tarjetas)</div>`;
-      r.pendientes.por_alumno.forEach(function(a){
-        html+=`<div style="margin-bottom:6px"><span style="font-size:13px;font-weight:600">${a.alumno_txt}</span>
-          <div class="nums-pendientes">${a.numeros.map(n=>'<span class="num-badge">'+n+'</span>').join('')}</div></div>`;
-      });
-      html+='</div>';
-    }
-
-    html+=`<div style="font-size:12px;color:var(--text-3)">
-      Monto potencial si todo se vende: <strong>$${fmt(r.pendientes.monto_estimado_venta + r.rendidas.monto_total)}</strong><br>
-      Monto potencial si todo rinde ganancia: <strong>$${fmt(r.pendientes.monto_estimado_ganancia + r.rendidas.monto_total)}</strong>
-    </div>`;
-
-    document.getElementById('rpt-body').innerHTML=html;
-    document.getElementById('modal-reporte').classList.add('open');
-  } catch(e){ showToast(e.message,'error'); }
-}
-
-function cerrar(id){ document.getElementById(id).classList.remove('open'); }
-
+function cerrar(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.modal-overlay').forEach(m=>{
-  m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open')});
+  m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
 });
-
-async function init(){ await cargarAlumnos(); cargarEventos(); }
+document.getElementById('modal-rendicion').addEventListener('click',function(e){
+  if(e.target===this){cerrar('modal-rendicion');cargarEventos();}
+});
 init();
 </script>
 </body>

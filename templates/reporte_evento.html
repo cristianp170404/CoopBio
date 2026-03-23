@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reporte de Evento – Cooperadora Escolar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/main.css">
+<style>
+.rpt-hero{background:linear-gradient(135deg,var(--blue) 0%,var(--blue-dark) 100%);color:#fff;padding:32px 36px;border-radius:var(--radius);margin-bottom:24px}
+.rpt-hero h1{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;margin-bottom:4px}
+.rpt-hero p{opacity:.8;font-size:14px}
+.kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:24px}
+@media(min-width:700px){.kpi-grid{grid-template-columns:repeat(4,1fr)}}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center}
+.kpi .val{font-size:28px;font-weight:800;font-family:'Syne',sans-serif;margin-bottom:2px}
+.kpi .lbl{font-size:12px;color:var(--text-3)}
+.kpi.green .val{color:var(--green)}.kpi.amber .val{color:var(--amber)}
+.kpi.blue .val{color:var(--blue)}.kpi.purple .val{color:#8b5cf6}
+.split-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+@media(max-width:600px){.split-grid{grid-template-columns:1fr}}
+.tipo-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+.tipo-box h3{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;margin-bottom:12px}
+.tipo-box.green{border-color:var(--green);background:rgba(30,125,75,.04)}
+.tipo-box.amber{border-color:var(--amber);background:rgba(180,83,9,.04)}
+.num-grid{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.num-chip{padding:3px 9px;border-radius:5px;font-size:12px;font-weight:700}
+.num-chip.venta{background:rgba(30,125,75,.15);color:var(--green)}
+.num-chip.ganancia{background:rgba(180,83,9,.13);color:var(--amber)}
+.num-chip.pendiente{background:rgba(239,68,68,.1);color:var(--red)}
+.entrega-tabla{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+.entrega-tabla th{text-align:left;font-weight:600;color:var(--text-3);font-size:11px;padding:6px 8px;border-bottom:1px solid var(--border)}
+.entrega-tabla td{padding:7px 8px;border-bottom:1px solid var(--border)}
+.pend-block{background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.18);border-radius:var(--radius);padding:16px;margin-bottom:24px}
+.pend-block h3{font-family:'Syne',sans-serif;font-weight:700;color:var(--red);margin-bottom:12px}
+.alumno-pend{margin-bottom:10px}
+.alumno-pend strong{font-size:13px}
+.proyeccion{background:var(--surface-2);border-radius:var(--radius);padding:14px 18px;font-size:13px;color:var(--text-2)}
+.print-btn{position:fixed;bottom:24px;right:24px;z-index:100}
+@media print{.print-btn,.sidebar{display:none!important} body{background:#fff}}
+</style>
+</head>
+<body>
+<div class="layout">
+  <main class="main-content">
+    <div class="page-content" id="contenido">
+      <p style="color:var(--text-3);text-align:center;padding:60px">Cargando reporte...</p>
+    </div>
+  </main>
+</div>
+<button class="btn btn-primary print-btn" onclick="window.print()">🖨️ Imprimir</button>
+<div id="toast"></div>
+<script src="/static/api.js"></script>
+<script src="/static/sidebar.js"></script>
+<script>
+function fmt(n){return Number(n||0).toLocaleString('es-AR');}
+
+async function cargarReporte(){
+  var params=new URLSearchParams(location.search);
+  var id=params.get('id');
+  if(!id){document.getElementById('contenido').innerHTML='<p style="color:var(--red);text-align:center;padding:40px">ID de evento no especificado</p>';return;}
+  try{
+    var r=await API.get('/api/eventos/'+id+'/reporte');
+    var ev=r.evento;
+    var html='';
+
+    // Hero
+    html+=`<div class="rpt-hero">
+      <h1>${ev.nombre}</h1>
+      <p>${ev.fecha||'Sin fecha'} · ${ev.tipo}${ev.descripcion?' · '+ev.descripcion:''}</p>
+      <p style="margin-top:8px;font-size:13px">Precio tarjeta: <strong>$${fmt(ev.precio_tarjeta)}</strong> · Ganancia: <strong>$${fmt(ev.ganancia_tarjeta)}</strong></p>
+    </div>`;
+
+    // KPIs
+    html+=`<div class="kpi-grid">
+      <div class="kpi blue"><div class="val">${r.total_tarjetas_entregadas}</div><div class="lbl">Tarjetas entregadas</div></div>
+      <div class="kpi green"><div class="val">${r.rendidas.cantidad}</div><div class="lbl">Rendidas</div></div>
+      <div class="kpi amber"><div class="val">${r.pendientes.cantidad}</div><div class="lbl">Pendientes</div></div>
+      <div class="kpi green"><div class="val">$${fmt(r.rendidas.monto_total)}</div><div class="lbl">Total recaudado</div></div>
+    </div>`;
+
+    // Split venta / ganancia
+    html+=`<div class="split-grid">
+      <div class="tipo-box green">
+        <h3>✅ Rendidas por venta</h3>
+        <div style="font-size:24px;font-weight:800;font-family:'Syne',sans-serif;color:var(--green)">${r.rendidas.por_venta.cantidad} tarjetas</div>
+        <div style="font-size:13px;color:var(--text-3);margin-top:2px">$${fmt(r.rendidas.por_venta.monto)}</div>
+        <div class="num-grid">${r.rendidas.por_venta.numeros.map(n=>'<span class="num-chip venta">'+n+'</span>').join('')||'<span style="font-size:12px;color:var(--text-3)">Ninguna aún</span>'}</div>
+      </div>
+      <div class="tipo-box amber">
+        <h3>💰 Rendidas por ganancia</h3>
+        <div style="font-size:24px;font-weight:800;font-family:'Syne',sans-serif;color:var(--amber)">${r.rendidas.por_ganancia.cantidad} tarjetas</div>
+        <div style="font-size:13px;color:var(--text-3);margin-top:2px">$${fmt(r.rendidas.por_ganancia.monto)}</div>
+        <div class="num-grid">${r.rendidas.por_ganancia.numeros.map(n=>'<span class="num-chip ganancia">'+n+'</span>').join('')||'<span style="font-size:12px;color:var(--text-3)">Ninguna aún</span>'}</div>
+      </div>
+    </div>`;
+
+    // Pendientes por alumno
+    if(r.pendientes.cantidad>0){
+      html+=`<div class="pend-block"><h3>⏳ Pendientes de rendición (${r.pendientes.cantidad} tarjetas)</h3>`;
+      r.pendientes.por_alumno.forEach(function(a){
+        html+=`<div class="alumno-pend"><strong>${a.alumno_txt}</strong>
+          <div class="num-grid">${a.numeros.map(n=>'<span class="num-chip pendiente">'+n+'</span>').join('')}</div></div>`;
+      });
+      html+='</div>';
+    }
+
+    // Entregas detalle
+    html+=`<div class="card" style="margin-bottom:24px">
+      <div class="card-header"><h2 class="card-title">Detalle de entregas (${r.total_entregas})</h2></div>
+      <table class="entrega-tabla">
+        <thead><tr><th>Alumno</th><th>Tarjetas asignadas</th><th>Rendidas</th><th>Pendientes</th><th>Monto rendido</th></tr></thead>
+        <tbody>`;
+    r.entregas.forEach(function(e){
+      var nums=JSON.parse(e.numeros_json||'[]');
+      html+=`<tr><td><strong>${e.alumno_txt}</strong></td><td>${nums.join(', ')}</td>
+        <td style="color:var(--green);font-weight:600">${e.tarjetas_rendidas||0}</td>
+        <td style="color:var(--amber);font-weight:600">${(e.tarjetas_total||0)-(e.tarjetas_rendidas||0)}</td>
+        <td>–</td></tr>`;
+    });
+    html+=`</tbody></table></div>`;
+
+    // Proyección
+    html+=`<div class="proyeccion">
+      <strong>Proyecciones si se rinden todas las pendientes:</strong><br>
+      Si todo se vende: <strong>$${fmt(r.pendientes.monto_estimado_venta+r.rendidas.monto_total)}</strong> total &nbsp;·&nbsp;
+      Si todo es por ganancia: <strong>$${fmt(r.pendientes.monto_estimado_ganancia+r.rendidas.monto_total)}</strong> total
+    </div>`;
+
+    document.getElementById('contenido').innerHTML=html;
+  }catch(e){
+    document.getElementById('contenido').innerHTML=`<p style="color:var(--red);text-align:center;padding:40px">Error: ${e.message}</p>`;
+  }
+}
+cargarReporte();
+</script>
+</body>
+</html>

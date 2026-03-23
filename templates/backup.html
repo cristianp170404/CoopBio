@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backup – Cooperadora Escolar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/main.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+<div class="layout">
+  <main class="main-content">
+    <header class="topbar">
+      <div><h1 class="page-title">Backup de datos</h1><p class="page-subtitle">Descargá la información en Excel</p></div>
+    </header>
+    <div class="page-content">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;max-width:900px">
+
+        <div class="card" style="text-align:center;padding:28px">
+          <div style="font-size:40px;margin-bottom:12px">📦</div>
+          <h3 style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:6px">Backup completo</h3>
+          <p style="font-size:13px;color:var(--text-3);margin-bottom:16px">Un archivo Excel con todas las tablas en pestañas separadas</p>
+          <button class="btn btn-primary" style="width:100%" onclick="descargarCompleto()">⬇ Descargar todo</button>
+        </div>
+
+        <div class="card" style="text-align:center;padding:28px">
+          <div style="font-size:40px;margin-bottom:12px">👩‍🎓</div>
+          <h3 style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:6px">Alumnos</h3>
+          <p style="font-size:13px;color:var(--text-3);margin-bottom:16px">Listado completo del padrón escolar</p>
+          <button class="btn" style="width:100%" onclick="descargarTabla('alumnos','Alumnos')">⬇ Descargar</button>
+        </div>
+
+        <div class="card" style="text-align:center;padding:28px">
+          <div style="font-size:40px;margin-bottom:12px">💰</div>
+          <h3 style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:6px">Cuotas y cobros</h3>
+          <p style="font-size:13px;color:var(--text-3);margin-bottom:16px">Todos los registros de pagos</p>
+          <button class="btn" style="width:100%" onclick="descargarTabla('cuotas','Cuotas')">⬇ Descargar</button>
+        </div>
+
+        <div class="card" style="text-align:center;padding:28px">
+          <div style="font-size:40px;margin-bottom:12px">🎟️</div>
+          <h3 style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:6px">Eventos y tarjetas</h3>
+          <p style="font-size:13px;color:var(--text-3);margin-bottom:16px">Eventos, entregas y rendiciones</p>
+          <button class="btn" style="width:100%" onclick="descargarEventos()">⬇ Descargar</button>
+        </div>
+
+        <div class="card" style="text-align:center;padding:28px">
+          <div style="font-size:40px;margin-bottom:12px">👕</div>
+          <h3 style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:6px">Indumentaria</h3>
+          <p style="font-size:13px;color:var(--text-3);margin-bottom:16px">Prendas y reservas</p>
+          <button class="btn" style="width:100%" onclick="descargarIndumentaria()">⬇ Descargar</button>
+        </div>
+
+      </div>
+      <div id="estado" style="margin-top:20px;font-size:13px;color:var(--text-3)"></div>
+    </div>
+  </main>
+</div>
+<div id="toast"></div>
+<script src="/static/api.js"></script>
+<script src="/static/sidebar.js"></script>
+<script>
+function estado(msg){document.getElementById('estado').textContent=msg;}
+
+async function obtenerBackup(){
+  estado('Descargando datos...');
+  var data=await API.get('/api/backup');
+  estado('');
+  return data;
+}
+
+function wb_add(wb,nombre,filas){
+  if(!filas||!filas.length) return;
+  var ws=XLSX.utils.json_to_sheet(filas);
+  XLSX.utils.book_append_sheet(wb,ws,nombre.substring(0,31));
+}
+
+async function descargarCompleto(){
+  try{
+    var data=await obtenerBackup();
+    var wb=XLSX.utils.book_new();
+    wb_add(wb,'Alumnos',data.alumnos);
+    wb_add(wb,'Cuotas',data.cuotas);
+    wb_add(wb,'Eventos',data.eventos);
+    wb_add(wb,'Entregas tarjetas',data.evento_entregas);
+    wb_add(wb,'Tarjetas rendicion',data.evento_tarjetas);
+    wb_add(wb,'Prendas',data.prendas);
+    wb_add(wb,'Reservas',data.reservas);
+    wb_add(wb,'Tipos concepto',data.tipos_concepto);
+    wb_add(wb,'Tipos evento',data.tipos_evento);
+    wb_add(wb,'Tipos prenda',data.tipos_prenda);
+    XLSX.writeFile(wb,'cooperadora_backup_'+new Date().toISOString().split('T')[0]+'.xlsx');
+    showToast('Backup descargado');
+  }catch(e){showToast(e.message,'error');}
+}
+
+async function descargarTabla(tabla,nombre){
+  try{
+    var data=await obtenerBackup();
+    var wb=XLSX.utils.book_new();
+    wb_add(wb,nombre,data[tabla]);
+    XLSX.writeFile(wb,nombre.toLowerCase()+'_'+new Date().toISOString().split('T')[0]+'.xlsx');
+    showToast(nombre+' descargado');
+  }catch(e){showToast(e.message,'error');}
+}
+
+async function descargarEventos(){
+  try{
+    var data=await obtenerBackup();
+    var wb=XLSX.utils.book_new();
+    wb_add(wb,'Eventos',data.eventos);
+    wb_add(wb,'Entregas',data.evento_entregas);
+    wb_add(wb,'Tarjetas',data.evento_tarjetas);
+    XLSX.writeFile(wb,'eventos_'+new Date().toISOString().split('T')[0]+'.xlsx');
+    showToast('Eventos descargados');
+  }catch(e){showToast(e.message,'error');}
+}
+
+async function descargarIndumentaria(){
+  try{
+    var data=await obtenerBackup();
+    var wb=XLSX.utils.book_new();
+    wb_add(wb,'Prendas',data.prendas);
+    wb_add(wb,'Reservas',data.reservas);
+    XLSX.writeFile(wb,'indumentaria_'+new Date().toISOString().split('T')[0]+'.xlsx');
+    showToast('Indumentaria descargada');
+  }catch(e){showToast(e.message,'error');}
+}
+</script>
+</body>
+</html>

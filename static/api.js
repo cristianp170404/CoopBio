@@ -3,7 +3,7 @@ const API = {
   base: '',  // mismo origen, Flask sirve el frontend
 
   async get(path) {
-    const r = await fetch(this.base + path);
+    const r = await fetch(this.base + path, {credentials: 'same-origin'});
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || 'Error del servidor');
     return j.data;
@@ -12,6 +12,7 @@ const API = {
   async post(path, body) {
     const r = await fetch(this.base + path, {
       method: 'POST',
+      credentials: 'same-origin',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(body)
     });
@@ -23,6 +24,7 @@ const API = {
   async put(path, body) {
     const r = await fetch(this.base + path, {
       method: 'PUT',
+      credentials: 'same-origin',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(body)
     });
@@ -34,6 +36,7 @@ const API = {
   async patch(path, body) {
     const r = await fetch(this.base + path, {
       method: 'PATCH',
+      credentials: 'same-origin',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(body)
     });
@@ -43,7 +46,7 @@ const API = {
   },
 
   async delete(path) {
-    const r = await fetch(this.base + path, {method: 'DELETE'});
+    const r = await fetch(this.base + path, {method: 'DELETE', credentials: 'same-origin'});
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || 'Error del servidor');
     return j.data;

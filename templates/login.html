@@ -47,12 +47,6 @@ async function login(){
     showToast(err.message,'error');
   }
 }
-// Si ya hay usuario en localStorage, ir directo al panel
-try{
-  if(localStorage.getItem('user')){
-    window.location.href='index.html';
-  }
-}catch(_){}
 </script>
 </body>
 </html>

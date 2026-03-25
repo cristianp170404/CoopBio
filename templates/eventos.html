@@ -196,19 +196,8 @@ function renderEventos(evs){
   if(!evs.length){document.getElementById('lista-eventos').innerHTML='<p style="color:var(--text-3);text-align:center;padding:40px">No hay eventos.</p>';return;}
   document.getElementById('lista-eventos').innerHTML=evs.map(ev=>{
     var s=ev.stats||{};var pend=(s.total||0)-(s.rendidas||0);
-    var entHtml=ev.entregas.length?ev.entregas.map(e=>`
-      <div class="entrega-row">
-        <div class="entrega-info">
-          <strong>${e.alumno_txt}</strong>
-          <div class="entrega-num">Tarjetas: ${JSON.parse(e.numeros_json||'[]').join(', ')||'–'} · ${e.tarjetas_rendidas||0}/${e.tarjetas_total||0} rendidas</div>
-        </div>
-        <div style="display:flex;gap:5px;flex-wrap:wrap">
-          <button class="btn btn-sm btn-primary" onclick="abrirRendicion(${ev.id},${e.alumno_id})">🎟 Rendir</button>
-          <button class="btn btn-sm" onclick="abrirAgregarTarjetas(${ev.id},${e.id},'${e.alumno_txt}')">+ Tarjetas</button>
-          <button class="btn btn-sm" style="color:var(--red)" onclick="eliminarEntrega(${ev.id},${e.id})">✕</button>
-        </div>
-      </div>`).join('')
-      :'<p style="font-size:13px;color:var(--text-3)">Sin tarjetas entregadas.</p>';
+    // ocultamos listado detallado de entregas aquí (usar botón 'Ver reporte')
+    var entHtml='';
     return `<div class="ev-card">
       <div class="ev-header">
         <div><div class="ev-nombre">${ev.nombre}</div><div class="ev-meta">${ev.fecha||'Sin fecha'} · ${ev.tipo}${ev.descripcion?' · '+ev.descripcion:''}</div></div>

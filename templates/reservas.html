@@ -136,17 +136,17 @@ function filtrar(){
 function render(data){
   document.getElementById('tbody').innerHTML=data.length
     ?data.map(r=>`<tr>
-        <td>${r.alumno_txt||'–'}</td><td>${r.prenda_txt||'–'}</td>
-        <td>$${fmt(r.precio)}</td>
-        <td style="text-align:center">${r.entregado?'<span style="color:var(--green);font-weight:700">Sí</span>':'<span style="color:var(--text-3)">No</span>'}</td>
-        <td class="${r.saldo>0?'':''}"><strong style="color:${r.saldo>0?'var(--amber)':'var(--green)'}">$${fmt(r.saldo)}</strong></td>
-        <td>${r.forma_pago}</td>
-        <td>${badge(r.estado)}</td>
-        <td style="display:flex;gap:4px;flex-wrap:wrap">
-          ${r.estado!=='Entregado'&&r.saldo>0?`<button class="btn btn-sm btn-primary" onclick="abrirCobrarSaldo(${r.id},'${r.alumno_txt}',${r.saldo})">Cobrar saldo</button>`:''}
-          ${r.estado!=='Entregado'&&r.saldo===0?`<button class="btn btn-sm btn-wa" onclick="marcarEntregado(${r.id})">✓ Entregar</button>`:''}
-        </td>
-      </tr>`).join('')
+          <td>${r.alumno_txt||'–'}</td><td>${r.prenda_txt||'–'}</td>
+          <td>$${fmt(r.precio)}</td>
+          <td style="text-align:center">${r.entregado?'<span style="color:var(--green);font-weight:700'>Sí</span>':'<span style="color:var(--text-3)">No</span>'}</td>
+          <td class="${r.saldo>0?'':''}"><strong style="color:${r.saldo>0?'var(--amber)':'var(--green)'}">$${fmt(r.saldo)}</strong></td>
+          <td>${r.forma_pago}</td>
+          <td>${badge(r.estado)}</td>
+          <td style="display:flex;gap:4px;flex-wrap:wrap">
+            ${r.estado!=='Entregado'&&r.saldo>0?`<button class="btn btn-sm btn-primary" onclick="abrirCobrarSaldo(${r.id},'${r.alumno_txt}','${r.tel_tutor||''}',${r.saldo})">Cobrar saldo</button>`:''}
+            ${r.estado!=='Entregado'&&r.saldo===0?`<button class="btn btn-sm btn-wa" onclick="marcarEntregado(${r.id})">✓ Entregar</button>`:''}
+          </td>
+        </tr>`).join('')
     :'<tr><td colspan="8" style="text-align:center;color:var(--text-3);padding:32px">Sin reservas</td></tr>';
 }
 
@@ -182,12 +182,17 @@ async function guardarReserva(){
   }catch(e){showToast(e.message,'error');}
 }
 
-async function abrirCobrarSaldo(id,nombre,saldo){
+async function abrirCobrarSaldo(id,nombre,tel,saldo){
   var monto=prompt('Cobrar saldo de '+nombre+'\nSaldo pendiente: $'+fmt(saldo)+'\n\nIngresá el monto a cobrar:',saldo);
   if(!monto) return;
   try{
     await API.post('/api/reservas/'+id+'/cobrar-saldo',{monto:parseFloat(monto),forma_pago:'Efectivo'});
     reservas=await API.get('/api/reservas'); filtrar(); showToast('Saldo cobrado');
+    if(tel){
+      // enviar WA con comprobante simple
+      var msg='Se registró un pago de $'+Number(monto).toLocaleString('es-AR')+' para '+nombre;
+      abrirWA(tel,msg);
+    }
   }catch(e){showToast(e.message,'error');}
 }
 

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gastos – Cooperadora Escolar</title>
+<link rel="stylesheet" href="/static/css/main.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="layout">
+  <main class="main-content">
+    <header class="topbar">
+      <div><h1 class="page-title">Gastos</h1><p class="page-subtitle">Registrar y reportar gastos de la cooperadora</p></div>
+      <div class="topbar-actions">
+        <button class="btn" onclick="abrirABMTiposGasto()">⚙️ Tipos</button>
+        <button class="btn btn-primary" onclick="abrirModalGasto()">+ Nuevo gasto</button>
+        <button class="btn" onclick="abrirReporte()">📊 Reporte</button>
+      </div>
+    </header>
+    <div class="page-content">
+      <div class="filter-bar" style="margin-bottom:12px">
+        <select id="filtro-tipo" style="max-width:220px" onchange="cargarGastos()"></select>
+        <input type="date" id="filtro-desde" onchange="cargarGastos()"> - <input type="date" id="filtro-hasta" onchange="cargarGastos()">
+      </div>
+      <div class="card">
+        <table class="table">
+          <thead><tr><th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Contacto</th><th>Teléfono</th><th>Monto</th><th style="width:130px"></th></tr></thead>
+          <tbody id="tbody-gastos"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL GASTO -->
+<div class="modal-overlay" id="modal-gasto"><div class="modal">
+  <div class="modal-title">Registrar gasto</div>
+  <input type="hidden" id="g-id">
+  <div class="form-group"><label class="form-label">Tipo</label>
+    <select id="g-tipo-id"></select>
+    <input type="text" id="g-tipo-txt" placeholder="o escribir tipo libre" style="margin-top:6px"></div>
+  <div class="form-group"><label class="form-label">Monto ($)</label><input type="number" id="g-monto" min="0"></div>
+  <div class="form-group"><label class="form-label">Descripción</label><input type="text" id="g-desc"></div>
+  <div class="form-grid">
+    <div class="form-group"><label class="form-label">Contacto</label><input type="text" id="g-contacto"></div>
+    <div class="form-group"><label class="form-label">Teléfono</label><input type="tel" id="g-tel"></div>
+  </div>
+  <div class="form-group"><label class="form-label">Fecha</label><input type="date" id="g-fecha"></div>
+  <div class="modal-footer"><button class="btn" onclick="cerrar('modal-gasto')">Cancelar</button>
+    <button class="btn btn-primary" onclick="guardarGasto()">Guardar</button></div>
+</div></div>
+
+<!-- MODAL TIPOS -->
+<div class="modal-overlay" id="modal-tipos-gasto"><div class="modal">
+  <div class="modal-title">Tipos de gasto</div>
+  <div id="lista-tipos-gasto" style="margin-bottom:12px"></div>
+  <div style="display:flex;gap:8px"><input type="text" id="nuevo-tipo-gasto" placeholder="Nuevo tipo..." style="flex:1"><button class="btn btn-primary" onclick="agregarTipoGasto()">Agregar</button></div>
+  <div class="modal-footer"><button class="btn" onclick="cerrar('modal-tipos-gasto')">Cerrar</button></div>
+</div></div>
+
+<!-- MODAL REPORTE -->
+<div class="modal-overlay" id="modal-reporte-gasto"><div class="modal" style="max-width:800px">
+  <div class="modal-title">Reporte de gastos</div>
+  <div style="height:300px"><canvas id="chart-gastos"></canvas></div>
+  <div id="reporte-detalle" style="margin-top:12px"></div>
+  <div class="modal-footer"><button class="btn" onclick="cerrar('modal-reporte-gasto')">Cerrar</button></div>
+</div></div>
+
+<div id="toast"></div>
+<script src="/static/api.js"></script>
+<script src="/static/sidebar.js"></script>
+<script>
+var tiposGasto=[], gastos=[];
+function fmt(n){return Number(n||0).toLocaleString('es-AR');}
+async function init(){
+  tiposGasto=await API.get('/api/tipos-gasto');
+  poblarTipos(); cargarGastos();
+}
+function poblarTipos(){
+  var sel=document.getElementById('filtro-tipo'); sel.innerHTML='<option value="">Todos</option>';
+  var sel2=document.getElementById('g-tipo-id'); sel2.innerHTML='<option value="">-</option>';
+  tiposGasto.forEach(t=>{ sel.innerHTML+=`<option value="${t.nombre}">${t.nombre}</option>`; sel2.innerHTML+=`<option value="${t.id}">${t.nombre}</option>`});
+}
+async function cargarGastos(){
+  var tipo=document.getElementById('filtro-tipo').value; var desde=document.getElementById('filtro-desde').value; var hasta=document.getElementById('filtro-hasta').value;
+  var q='/api/gastos?'; if(tipo) q+='tipo='+encodeURIComponent(tipo)+'&'; if(desde) q+='desde='+desde+'&'; if(hasta) q+='hasta='+hasta+'&';
+  gastos=await API.get(q);
+  renderGastos();
+}
+function renderGastos(){
+  document.getElementById('tbody-gastos').innerHTML=gastos.length?gastos.map(g=>`<tr>
+    <td>${g.fecha||'–'}</td><td>${g.tipo_nombre||g.tipo_txt||'–'}</td><td>${g.descripcion||'–'}</td><td>${g.contacto||'–'}</td><td>${g.telefono||'–'}</td>
+    <td>$${fmt(g.monto)}</td>
+    <td style="display:flex;gap:6px"><button class="btn btn-sm" onclick="editarGasto(${g.id})">✏️</button><button class="btn btn-sm" style="color:var(--red)" onclick="borrarGasto(${g.id})">✕</button></td>
+  </tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:24px">Sin gastos</td></tr>';
+}
+function abrirModalGasto(){ document.getElementById('g-id').value=''; document.getElementById('g-tipo-id').value=''; document.getElementById('g-tipo-txt').value=''; document.getElementById('g-monto').value=''; document.getElementById('g-desc').value=''; document.getElementById('g-contacto').value=''; document.getElementById('g-tel').value=''; document.getElementById('g-fecha').value=''; document.getElementById('modal-gasto').classList.add('open'); }
+async function guardarGasto(){ var id=document.getElementById('g-id').value; var tipo_id=document.getElementById('g-tipo-id').value||null; var tipo_txt=document.getElementById('g-tipo-txt').value||''; var monto=parseFloat(document.getElementById('g-monto').value)||0; if(!monto){showToast('Monto requerido','error');return;} var body={tipo_id: tipo_id?parseInt(tipo_id):null,tipo_txt,monto,descripcion:document.getElementById('g-desc').value,contacto:document.getElementById('g-contacto').value,telefono:document.getElementById('g-tel').value,fecha:document.getElementById('g-fecha').value||null}; try{ if(id) await API.put('/api/gastos/'+id,body); else await API.post('/api/gastos',body); cerrar('modal-gasto'); tiposGasto=await API.get('/api/tipos-gasto'); cargarGastos(); showToast('Gasto guardado'); }catch(e){showToast(e.message,'error');} }
+function editarGasto(id){ var g=gastos.find(x=>x.id==id); if(!g) return; document.getElementById('g-id').value=g.id; document.getElementById('g-tipo-id').value=g.tipo_id||''; document.getElementById('g-tipo-txt').value=g.tipo_txt||''; document.getElementById('g-monto').value=g.monto; document.getElementById('g-desc').value=g.descripcion||''; document.getElementById('g-contacto').value=g.contacto||''; document.getElementById('g-tel').value=g.telefono||''; document.getElementById('g-fecha').value=g.date||g.fecha||''; document.getElementById('modal-gasto').classList.add('open'); }
+async function borrarGasto(id){ if(!confirm('Eliminar gasto?')) return; try{ await API.delete('/api/gastos/'+id); cargarGastos(); showToast('Gasto eliminado'); }catch(e){showToast(e.message,'error');} }
+
+async function abrirABMTiposGasto(){ tiposGasto=await API.get('/api/tipos-gasto'); document.getElementById('lista-tipos-gasto').innerHTML=tiposGasto.map(t=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span>${t.nombre}</span><button class="btn btn-sm" style="color:var(--red)" onclick="borrarTipoGasto(${t.id},'${t.nombre}')">Eliminar</button></div>`).join(''); document.getElementById('modal-tipos-gasto').classList.add('open'); }
+async function agregarTipoGasto(){ var n=document.getElementById('nuevo-tipo-gasto').value.trim(); if(!n){showToast('Ingresá un nombre','error');return;} try{ await API.post('/api/tipos-gasto',{nombre:n}); document.getElementById('nuevo-tipo-gasto').value=''; tiposGasto=await API.get('/api/tipos-gasto'); poblarTipos(); document.getElementById('lista-tipos-gasto').innerHTML=tiposGasto.map(t=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span>${t.nombre}</span><button class="btn btn-sm" style="color:var(--red)" onclick="borrarTipoGasto(${t.id},'${t.nombre}')">Eliminar</button></div>`).join(''); showToast('Tipo agregado'); }catch(e){showToast(e.message,'error');} }
+async function borrarTipoGasto(id,nombre){ if(!confirm('Eliminar tipo "'+nombre+'"?')) return; try{ await API.delete('/api/tipos-gasto/'+id); tiposGasto=await API.get('/api/tipos-gasto'); poblarTipos(); showToast('Tipo eliminado'); }catch(e){showToast(e.message,'error');} }
+
+async function abrirReporte(){ try{ var r=await API.get('/api/gastos/reporte'); var ctx=document.getElementById('chart-gastos').getContext('2d'); var labels=r.por_tipo.map(x=>x.tipo||'Sin tipo'); var data=r.por_tipo.map(x=>x.total); if(window._gastoChart) window._gastoChart.destroy(); window._gastoChart=new Chart(ctx,{type:'pie',data:{labels,datasets:[{data,backgroundColor:['#1a6fc4','#1e7d4b','#f59e0b','#ef4444','#8b5cf6']}]}}); var detalleHtml='<div style="margin-top:8px"><strong>Total:</strong> $'+fmt(r.total)+'</div><table class="table" style="margin-top:8px"><thead><tr><th>Fecha</th><th>Tipo</th><th>Desc</th><th>Contacto</th><th>Monto</th></tr></thead><tbody>'+r.detalle.map(d=>`<tr><td>${d.fecha||'–'}</td><td>${d.tipo_nombre||d.tipo_txt||'–'}</td><td>${d.descripcion||'–'}</td><td>${d.contacto||'–'}</td><td>$${fmt(d.monto)}</td></tr>`).join('')+'</tbody></table>'; document.getElementById('reporte-detalle').innerHTML=detalleHtml; document.getElementById('modal-reporte-gasto').classList.add('open'); }catch(e){showToast(e.message,'error');} }
+
+function cerrar(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');}));
+init();
+</script>
+</body>
+</html>

@@ -116,7 +116,7 @@ async function cargarReporte(){
       html+=`<tr><td><strong>${e.alumno_txt}</strong></td><td>${nums.join(', ')}</td>
         <td style="color:var(--green);font-weight:600">${e.tarjetas_rendidas||0}</td>
         <td style="color:var(--amber);font-weight:600">${(e.tarjetas_total||0)-(e.tarjetas_rendidas||0)}</td>
-        <td>–</td></tr>`;
+        <td>$${fmt(e.monto_rendido||0)}</td></tr>`;
     });
     html+=`</tbody></table></div>`;
 

@@ -74,9 +74,13 @@
 <div class="modal-overlay" id="modal-precio">
   <div class="modal">
     <div class="modal-title" id="precio-titulo">Editar prenda</div>
-    <input type="hidden" id="ep-id">
-    <div class="form-group"><label class="form-label">Precio ($)</label><input type="number" id="ep-precio" min="0"></div>
-    <div class="form-group"><label class="form-label">Stock</label><input type="number" id="ep-stock" min="0"></div>
+      <input type="hidden" id="ep-id">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Talle</label><input type="text" id="ep-talle"></div>
+        <div class="form-group"><label class="form-label">Color</label><input type="text" id="ep-color"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Precio ($)</label><input type="number" id="ep-precio" min="0"></div>
+      <div class="form-group"><label class="form-label">Stock</label><input type="number" id="ep-stock" min="0"></div>
     <div class="modal-footer">
       <button class="btn" onclick="cerrar('modal-precio')">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarPrecioStock()">Guardar</button>
@@ -121,12 +125,13 @@ function filtrar(){
 function render(data){
   document.getElementById('tbody').innerHTML=data.length
     ?data.map(p=>`<tr>
-        <td><strong>${p.nombre}</strong></td><td>${p.talle}</td><td>${p.color||'–'}</td>
+          <td><strong>${p.nombre}</strong></td><td>${p.talle}</td><td>${p.color||'–'}</td>
         <td><strong>$${fmt(p.precio)}</strong></td>
         <td><span style="font-weight:700;color:${p.stock>0?'var(--green)':'var(--red)'}">${p.stock}</span></td>
         <td>${p.reservado||0}</td>
         <td style="display:flex;gap:4px">
-          <button class="btn btn-sm" onclick="editarPrecioStock(${p.id},'${p.nombre} ${p.talle}',${p.precio},${p.stock})">✏️ Editar</button>
+          <button class="btn btn-sm" onclick="editarPrecioStock(${p.id},'${p.nombre} ${p.talle}',${p.precio},${p.stock},'${p.talle}','${p.color||''}')">✏️ Editar</button>
+          <button class="btn btn-sm" style="color:var(--red)" onclick="borrarPrenda(${p.id},'${p.nombre} ${p.talle}')">✕</button>
         </td>
       </tr>`).join('')
     :'<tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:32px">Sin prendas</td></tr>';
@@ -151,21 +156,25 @@ async function guardarPrenda(){
   }catch(e){showToast(e.message,'error');}
 }
 
-function editarPrecioStock(id,nombre,precio,stock){
+function editarPrecioStock(id,nombre,precio,stock,talle,color){
   document.getElementById('ep-id').value=id;
   document.getElementById('precio-titulo').textContent='Editar: '+nombre;
   document.getElementById('ep-precio').value=precio;
   document.getElementById('ep-stock').value=stock;
+  document.getElementById('ep-talle').value=talle||'';
+  document.getElementById('ep-color').value=color||'';
   document.getElementById('modal-precio').classList.add('open');
 }
 async function guardarPrecioStock(){
   var id=document.getElementById('ep-id').value;
   var precio=parseFloat(document.getElementById('ep-precio').value)||0;
   var stock=parseInt(document.getElementById('ep-stock').value)||0;
+  var talle=document.getElementById('ep-talle').value||'';
+  var color=document.getElementById('ep-color').value||'';
   try{
-    // Actualizar precio via PUT y stock via PATCH
     var p=prendas.find(x=>x.id==id);
-    await API.put('/api/prendas/'+id,{nombre:p.nombre,talle:p.talle,color:p.color,stock,precio});
+    var nombre=p.nombre;
+    await API.put('/api/prendas/'+id,{nombre:nombre,talle:talle,color:color,stock,precio});
     cerrar('modal-precio'); prendas=await API.get('/api/prendas'); filtrar(); showToast('Prenda actualizada');
   }catch(e){showToast(e.message,'error');}
 }
@@ -193,6 +202,12 @@ async function agregarTipo(){
 async function borrarTipo(id,nombre){
   if(!confirm('¿Eliminar tipo "'+nombre+'"?')) return;
   try{await API.delete('/api/tipos-prenda/'+id);recargarTipos();showToast('Tipo eliminado');}
+  catch(e){showToast(e.message,'error');}
+}
+
+async function borrarPrenda(id,nombre){
+  if(!confirm('¿Eliminar prenda "'+nombre+'"?')) return;
+  try{await API.delete('/api/prendas/'+id);prendas=await API.get('/api/prendas');filtrar();showToast('Prenda eliminada');}
   catch(e){showToast(e.message,'error');}
 }
 

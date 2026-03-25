@@ -1,6 +1,6 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, redirect
 import sqlite3, os, json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(BASE_DIR, 'templates')
@@ -27,6 +27,43 @@ def get_db():
 
 def ok(data=None,status=200): return jsonify({'ok':True,'data':data}),status
 def err(msg,status=400): return jsonify({'ok':False,'error':msg}),status
+
+def _now_str():
+    return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+def create_session(conn,user_id,days=7):
+    import uuid
+    token=uuid.uuid4().hex
+    expires=(datetime.now()+ timedelta(days=days)).strftime('%Y-%m-%d %H:%M:%S')
+    conn.execute("INSERT OR REPLACE INTO sessions (token,user_id,creado_en,expires_at) VALUES (?,?,?,?)",(token,user_id,_now_str(),expires))
+    return token
+
+def get_user_by_token(token):
+    if not token: return None
+    conn=get_db()
+    s=conn.execute("SELECT user_id,expires_at FROM sessions WHERE token=?",(token,)).fetchone()
+    if not s:
+        conn.close(); return None
+    try:
+        if s['expires_at'] and datetime.strptime(s['expires_at'],'%Y-%m-%d %H:%M:%S') < datetime.now():
+            conn.execute("DELETE FROM sessions WHERE token=?",(token,)); conn.commit(); conn.close(); return None
+    except Exception:
+        pass
+    u=conn.execute("SELECT id,email,activo FROM users WHERE id=?",(s['user_id'],)).fetchone()
+    conn.close()
+    return dict(u) if u else None
+
+def require_auth(f):
+    from functools import wraps
+    @wraps(f)
+    def wrapper(*args,**kwargs):
+        token=request.cookies.get('session_token') or request.headers.get('Authorization')
+        if token and token.startswith('Bearer '): token=token.split(' ',1)[1]
+        u=get_user_by_token(token)
+        if not u: return err('No autorizado',401)
+        request.current_user=u
+        return f(*args,**kwargs)
+    return wrapper
 
 def init_db():
     db_dir=os.path.dirname(DB_PATH)
@@ -118,6 +155,12 @@ def init_db():
         password_hash TEXT NOT NULL,
         activo INTEGER DEFAULT 1,
         creado_en TEXT DEFAULT (datetime('now','localtime'))
+    );
+    CREATE TABLE IF NOT EXISTS sessions (
+        token TEXT PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        creado_en TEXT DEFAULT (datetime('now','localtime')),
+        expires_at TEXT
     );
     CREATE TABLE IF NOT EXISTS prendas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -243,6 +286,12 @@ def index(): return send_from_directory(TEMPLATES_DIR,'index.html')
 @app.route('/<path:filename>')
 def serve_static(filename):
     if filename.endswith('.html'):
+        # Páginas administrativas requieren sesión: redirigir a login si no está
+        admin_pages = ['gastos.html','usuarios.html','indumentaria.html','eventos.html']
+        token=request.cookies.get('session_token') or request.headers.get('Authorization')
+        if token and token.startswith('Bearer '): token=token.split(' ',1)[1]
+        if filename in admin_pages and not get_user_by_token(token):
+            return redirect('/usuarios.html')
         p=os.path.join(TEMPLATES_DIR,filename)
         if os.path.exists(p): return send_from_directory(TEMPLATES_DIR,filename)
     p=os.path.join(STATIC_DIR,filename)
@@ -667,6 +716,7 @@ def listar_prendas():
     conn.close(); return ok([dict(r) for r in rows])
 
 @app.route('/api/prendas',methods=['POST'])
+@require_auth
 def crear_prenda():
     d=request.json or {}
     if not d.get('nombre') or not d.get('precio'): return err('nombre y precio son requeridos')
@@ -676,6 +726,7 @@ def crear_prenda():
     conn.commit(); conn.close(); return ok({'id':cur.lastrowid},201)
 
 @app.route('/api/prendas/<int:id>',methods=['PUT'])
+@require_auth
 def editar_prenda(id):
     d=request.json or {}
     conn=get_db()
@@ -684,6 +735,7 @@ def editar_prenda(id):
     conn.commit(); conn.close(); return ok({'id':id})
 
 @app.route('/api/prendas/<int:id>/stock',methods=['PATCH'])
+@require_auth
 def ajustar_stock(id):
     d=request.json or {}; nuevo=d.get('stock')
     if nuevo is None: return err('stock requerido')
@@ -692,6 +744,7 @@ def ajustar_stock(id):
 
 
 @app.route('/api/prendas/<int:id>',methods=['DELETE'])
+@require_auth
 def borrar_prenda(id):
     conn=get_db()
     # opcional: evitar borrar si está en reservas
@@ -709,6 +762,7 @@ def listar_tipos_gasto():
     conn.close(); return ok([dict(r) for r in rows])
 
 @app.route('/api/tipos-gasto',methods=['POST'])
+@require_auth
 def crear_tipo_gasto():
     d=request.json or {}
     if not d.get('nombre'): return err('El nombre es requerido')
@@ -720,6 +774,7 @@ def crear_tipo_gasto():
         conn.close(); return err('Ya existe ese tipo de gasto')
 
 @app.route('/api/tipos-gasto/<int:id>',methods=['PUT'])
+@require_auth
 def editar_tipo_gasto(id):
     d=request.json or {}
     conn=get_db()
@@ -727,6 +782,7 @@ def editar_tipo_gasto(id):
     conn.commit(); conn.close(); return ok()
 
 @app.route('/api/tipos-gasto/<int:id>',methods=['DELETE'])
+@require_auth
 def borrar_tipo_gasto(id):
     conn=get_db(); conn.execute("DELETE FROM tipos_gasto WHERE id=?",(id,)); conn.commit(); conn.close(); return ok()
 
@@ -744,6 +800,7 @@ def listar_gastos():
     rows=conn.execute(sql,params).fetchall(); conn.close(); return ok([dict(r) for r in rows])
 
 @app.route('/api/gastos',methods=['POST'])
+@require_auth
 def crear_gasto():
     d=request.json or {}
     tipo_id=d.get('tipo_id'); tipo_txt=d.get('tipo_txt',''); monto=d.get('monto')
@@ -754,6 +811,7 @@ def crear_gasto():
     conn.commit(); conn.close(); return ok({'id':cur.lastrowid},201)
 
 @app.route('/api/gastos/<int:id>',methods=['PUT'])
+@require_auth
 def editar_gasto(id):
     d=request.json or {}
     conn=get_db(); conn.execute("UPDATE gastos SET tipo_id=?,tipo_txt=?,monto=?,descripcion=?,contacto=?,telefono=?,fecha=? WHERE id=?",
@@ -761,16 +819,18 @@ def editar_gasto(id):
     conn.commit(); conn.close(); return ok()
 
 @app.route('/api/gastos/<int:id>',methods=['DELETE'])
+@require_auth
 def borrar_gasto(id):
     conn=get_db(); conn.execute("DELETE FROM gastos WHERE id=?",(id,)); conn.commit(); conn.close(); return ok()
 
+
 @app.route('/api/gastos/reporte',methods=['GET'])
+@require_auth
 def reporte_gastos():
     conn=get_db()
     rows=conn.execute("SELECT tg.nombre as tipo, COUNT(g.id) as cantidad, COALESCE(SUM(g.monto),0) as total FROM gastos g LEFT JOIN tipos_gasto tg ON g.tipo_id=tg.id GROUP BY tg.nombre ORDER BY total DESC").fetchall()
     lista=[dict(r) for r in rows]
     total=sum(r['total'] for r in lista)
-    # listado completo
     detalle=[dict(r) for r in conn.execute("SELECT g.*, tg.nombre as tipo_nombre FROM gastos g LEFT JOIN tipos_gasto tg ON g.tipo_id=tg.id ORDER BY g.fecha DESC").fetchall()]
     conn.close(); return ok({'por_tipo':lista,'total':total,'detalle':detalle})
 
@@ -781,10 +841,12 @@ def _hash(pw):
     return hashlib.sha256((pw or '').encode('utf-8')).hexdigest()
 
 @app.route('/api/users',methods=['GET'])
+@require_auth
 def listar_users():
     conn=get_db(); rows=conn.execute("SELECT id,email,activo,creado_en FROM users ORDER BY email").fetchall(); conn.close(); return ok([dict(r) for r in rows])
 
 @app.route('/api/users',methods=['POST'])
+@require_auth
 def crear_user():
     d=request.json or {}
     if not d.get('email') or not d.get('password'): return err('email y password requeridos')
@@ -796,6 +858,7 @@ def crear_user():
         conn.close(); return err('No se pudo crear usuario: '+str(e))
 
 @app.route('/api/users/<int:id>',methods=['PUT'])
+@require_auth
 def editar_user(id):
     d=request.json or {}
     conn=get_db()
@@ -814,7 +877,23 @@ def login():
     conn.close()
     if not u: return err('Usuario no encontrado',404)
     if u['password_hash']!=_hash(d.get('password')): return err('Credenciales inválidas',401)
-    return ok({'id':u['id'],'email':u['email']})
+    # crear sesión y setear cookie
+    conn=get_db()
+    token=create_session(conn,u['id'])
+    conn.commit(); conn.close()
+    resp=jsonify({'ok':True,'data':{'id':u['id'],'email':u['email']}})
+    resp.set_cookie('session_token',token,httponly=True,samesite='Lax')
+    return resp,200
+
+@app.route('/api/logout',methods=['POST'])
+def logout():
+    token=request.cookies.get('session_token') or request.headers.get('Authorization')
+    if token and token.startswith('Bearer '): token=token.split(' ',1)[1]
+    if token:
+        conn=get_db(); conn.execute("DELETE FROM sessions WHERE token=?",(token,)); conn.commit(); conn.close()
+    resp=jsonify({'ok':True,'data':None})
+    resp.delete_cookie('session_token')
+    return resp,200
 
 # ── Reservas ──────────────────────────────────────────────────────────────────
 @app.route('/api/reservas',methods=['GET'])
@@ -840,6 +919,7 @@ def crear_reserva():
     conn.commit(); conn.close(); return ok({'id':cur.lastrowid,'estado':estado,'saldo':saldo},201)
 
 @app.route('/api/reservas/<int:id>/cobrar-saldo',methods=['POST'])
+@require_auth
 def cobrar_saldo_reserva(id):
     d=request.json or {}; monto=float(d.get('monto',0))
     if not monto: return err('Monto requerido')
@@ -851,6 +931,7 @@ def cobrar_saldo_reserva(id):
     conn.commit(); conn.close(); return ok({'saldo':nuevo_saldo,'estado':nuevo_estado})
 
 @app.route('/api/reservas/<int:id>/entregar',methods=['POST'])
+@require_auth
 def entregar_reserva(id):
     conn=get_db(); r=conn.execute("SELECT * FROM reservas WHERE id=?",(id,)).fetchone()
     if not r: conn.close(); return err('Reserva no encontrada',404)

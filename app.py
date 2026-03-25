@@ -96,6 +96,29 @@ def init_db():
         nombre TEXT NOT NULL UNIQUE,
         activo INTEGER DEFAULT 1
     );
+    CREATE TABLE IF NOT EXISTS tipos_gasto (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT NOT NULL UNIQUE,
+        activo INTEGER DEFAULT 1
+    );
+    CREATE TABLE IF NOT EXISTS gastos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tipo_id INTEGER REFERENCES tipos_gasto(id),
+        tipo_txt TEXT DEFAULT '',
+        monto REAL NOT NULL,
+        descripcion TEXT DEFAULT '',
+        contacto TEXT DEFAULT '',
+        telefono TEXT DEFAULT '',
+        fecha TEXT DEFAULT (date('now','localtime')),
+        creado_en TEXT DEFAULT (datetime('now','localtime'))
+    );
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        activo INTEGER DEFAULT 1,
+        creado_en TEXT DEFAULT (datetime('now','localtime'))
+    );
     CREATE TABLE IF NOT EXISTS prendas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nombre TEXT NOT NULL, talle TEXT NOT NULL,
@@ -139,6 +162,19 @@ def init_db():
     for p in ['Campera','Buzo','Remera','Pantalon','Bermuda','Otro']:
         try: conn.execute("INSERT INTO tipos_prenda (nombre) VALUES (?)",(p,))
         except: pass
+
+    # Seed tipos_gasto por defecto
+    for g in ['Seguro','Servicio médico','Suministros','Alquiler','Otro']:
+        try: conn.execute("INSERT INTO tipos_gasto (nombre) VALUES (?)",(g,))
+        except: pass
+
+    # Seed admin user
+    try:
+        import hashlib
+        pw='123456789'
+        h=hashlib.sha256(pw.encode('utf-8')).hexdigest()
+        conn.execute("INSERT OR IGNORE INTO users (email,password_hash,activo) VALUES (?,?,1)",( 'lamberghinim@gmail.com', h))
+    except: pass
 
     cur=conn.execute("SELECT COUNT(*) FROM alumnos")
     if cur.fetchone()[0]==0: _seed_demo(conn)
@@ -551,8 +587,18 @@ def reporte_evento(id):
     ev=conn.execute("SELECT * FROM eventos WHERE id=?",(id,)).fetchone()
     if not ev: conn.close(); return err('Evento no encontrado',404)
     ev=dict(ev)
-    entregas=conn.execute("""SELECT ee.*,a.apellido,a.nombre FROM evento_entregas ee
-        JOIN alumnos a ON ee.alumno_id=a.id WHERE ee.evento_id=? ORDER BY ee.id""",(id,)).fetchall()
+    entregas=conn.execute("""
+        SELECT ee.*, a.apellido, a.nombre,
+            COUNT(et.id) as tarjetas_total,
+            SUM(CASE WHEN et.rendida=1 THEN 1 ELSE 0 END) as tarjetas_rendidas,
+            COALESCE(SUM(CASE WHEN et.rendida=1 THEN et.monto_rendido ELSE 0 END),0) as monto_rendido
+        FROM evento_entregas ee
+        JOIN alumnos a ON ee.alumno_id=a.id
+        LEFT JOIN evento_tarjetas et ON et.entrega_id=ee.id
+        WHERE ee.evento_id=?
+        GROUP BY ee.id
+        ORDER BY ee.id
+    """,(id,)).fetchall()
     tarjetas=conn.execute("""SELECT et.*,a.apellido,a.nombre FROM evento_tarjetas et
         JOIN alumnos a ON et.alumno_id=a.id WHERE et.evento_id=? ORDER BY et.numero""",(id,)).fetchall()
     conn.close()
@@ -643,6 +689,132 @@ def ajustar_stock(id):
     if nuevo is None: return err('stock requerido')
     conn=get_db(); conn.execute("UPDATE prendas SET stock=? WHERE id=?",(int(nuevo),id))
     conn.commit(); conn.close(); return ok()
+
+
+@app.route('/api/prendas/<int:id>',methods=['DELETE'])
+def borrar_prenda(id):
+    conn=get_db()
+    # opcional: evitar borrar si está en reservas
+    en_uso=conn.execute("SELECT COUNT(*) FROM reservas WHERE prenda_id=?",(id,)).fetchone()[0]
+    if en_uso>0:
+        conn.close(); return err('No se puede eliminar: prenda en uso en reservas')
+    conn.execute("DELETE FROM prendas WHERE id=?",(id,))
+    conn.commit(); conn.close(); return ok()
+
+# ── Tipos de gasto (ABM) ───────────────────────────────────────────────────
+@app.route('/api/tipos-gasto',methods=['GET'])
+def listar_tipos_gasto():
+    conn=get_db()
+    rows=conn.execute("SELECT * FROM tipos_gasto ORDER BY nombre").fetchall()
+    conn.close(); return ok([dict(r) for r in rows])
+
+@app.route('/api/tipos-gasto',methods=['POST'])
+def crear_tipo_gasto():
+    d=request.json or {}
+    if not d.get('nombre'): return err('El nombre es requerido')
+    conn=get_db()
+    try:
+        cur=conn.execute("INSERT INTO tipos_gasto (nombre) VALUES (?)",(d['nombre'],))
+        conn.commit(); conn.close(); return ok({'id':cur.lastrowid},201)
+    except Exception:
+        conn.close(); return err('Ya existe ese tipo de gasto')
+
+@app.route('/api/tipos-gasto/<int:id>',methods=['PUT'])
+def editar_tipo_gasto(id):
+    d=request.json or {}
+    conn=get_db()
+    conn.execute("UPDATE tipos_gasto SET nombre=?,activo=? WHERE id=?",(d.get('nombre'),d.get('activo',1),id))
+    conn.commit(); conn.close(); return ok()
+
+@app.route('/api/tipos-gasto/<int:id>',methods=['DELETE'])
+def borrar_tipo_gasto(id):
+    conn=get_db(); conn.execute("DELETE FROM tipos_gasto WHERE id=?",(id,)); conn.commit(); conn.close(); return ok()
+
+# ── Gastos ─────────────────────────────────────────────────────────────────
+@app.route('/api/gastos',methods=['GET'])
+def listar_gastos():
+    tipo=request.args.get('tipo',''); desde=request.args.get('desde'); hasta=request.args.get('hasta')
+    conn=get_db()
+    sql="SELECT g.*, tg.nombre as tipo_nombre FROM gastos g LEFT JOIN tipos_gasto tg ON g.tipo_id=tg.id WHERE 1=1"
+    params=[]
+    if tipo: sql+=" AND (tg.nombre=? OR g.tipo_txt=?)"; params.extend([tipo,tipo])
+    if desde: sql+=" AND date(g.fecha) >= date(?)"; params.append(desde)
+    if hasta: sql+=" AND date(g.fecha) <= date(?)"; params.append(hasta)
+    sql+=" ORDER BY g.fecha DESC"
+    rows=conn.execute(sql,params).fetchall(); conn.close(); return ok([dict(r) for r in rows])
+
+@app.route('/api/gastos',methods=['POST'])
+def crear_gasto():
+    d=request.json or {}
+    tipo_id=d.get('tipo_id'); tipo_txt=d.get('tipo_txt',''); monto=d.get('monto')
+    if monto is None: return err('Monto requerido')
+    conn=get_db()
+    cur=conn.execute("INSERT INTO gastos (tipo_id,tipo_txt,monto,descripcion,contacto,telefono,fecha) VALUES (?,?,?,?,?,?,?)",
+        (tipo_id,tipo_txt,float(monto),d.get('descripcion',''),d.get('contacto',''),d.get('telefono',''),d.get('fecha')))
+    conn.commit(); conn.close(); return ok({'id':cur.lastrowid},201)
+
+@app.route('/api/gastos/<int:id>',methods=['PUT'])
+def editar_gasto(id):
+    d=request.json or {}
+    conn=get_db(); conn.execute("UPDATE gastos SET tipo_id=?,tipo_txt=?,monto=?,descripcion=?,contacto=?,telefono=?,fecha=? WHERE id=?",
+        (d.get('tipo_id'),d.get('tipo_txt'),float(d.get('monto',0)),d.get('descripcion',''),d.get('contacto',''),d.get('telefono',''),d.get('fecha'),id))
+    conn.commit(); conn.close(); return ok()
+
+@app.route('/api/gastos/<int:id>',methods=['DELETE'])
+def borrar_gasto(id):
+    conn=get_db(); conn.execute("DELETE FROM gastos WHERE id=?",(id,)); conn.commit(); conn.close(); return ok()
+
+@app.route('/api/gastos/reporte',methods=['GET'])
+def reporte_gastos():
+    conn=get_db()
+    rows=conn.execute("SELECT tg.nombre as tipo, COUNT(g.id) as cantidad, COALESCE(SUM(g.monto),0) as total FROM gastos g LEFT JOIN tipos_gasto tg ON g.tipo_id=tg.id GROUP BY tg.nombre ORDER BY total DESC").fetchall()
+    lista=[dict(r) for r in rows]
+    total=sum(r['total'] for r in lista)
+    # listado completo
+    detalle=[dict(r) for r in conn.execute("SELECT g.*, tg.nombre as tipo_nombre FROM gastos g LEFT JOIN tipos_gasto tg ON g.tipo_id=tg.id ORDER BY g.fecha DESC").fetchall()]
+    conn.close(); return ok({'por_tipo':lista,'total':total,'detalle':detalle})
+
+# ── Usuarios / Login (simple) ───────────────────────────────────────────────
+import hashlib
+
+def _hash(pw):
+    return hashlib.sha256((pw or '').encode('utf-8')).hexdigest()
+
+@app.route('/api/users',methods=['GET'])
+def listar_users():
+    conn=get_db(); rows=conn.execute("SELECT id,email,activo,creado_en FROM users ORDER BY email").fetchall(); conn.close(); return ok([dict(r) for r in rows])
+
+@app.route('/api/users',methods=['POST'])
+def crear_user():
+    d=request.json or {}
+    if not d.get('email') or not d.get('password'): return err('email y password requeridos')
+    conn=get_db()
+    try:
+        cur=conn.execute("INSERT INTO users (email,password_hash,activo) VALUES (?,?,1)",(d['email'],_hash(d['password'])))
+        conn.commit(); conn.close(); return ok({'id':cur.lastrowid},201)
+    except Exception as e:
+        conn.close(); return err('No se pudo crear usuario: '+str(e))
+
+@app.route('/api/users/<int:id>',methods=['PUT'])
+def editar_user(id):
+    d=request.json or {}
+    conn=get_db()
+    if d.get('password'):
+        conn.execute("UPDATE users SET email=?,password_hash=?,activo=? WHERE id=?",(d.get('email'),_hash(d.get('password')),d.get('activo',1),id))
+    else:
+        conn.execute("UPDATE users SET email=?,activo=? WHERE id=?",(d.get('email'),d.get('activo',1),id))
+    conn.commit(); conn.close(); return ok()
+
+@app.route('/api/login',methods=['POST'])
+def login():
+    d=request.json or {}
+    if not d.get('email') or not d.get('password'): return err('email y password requeridos')
+    conn=get_db()
+    u=conn.execute("SELECT id,email,activo,password_hash FROM users WHERE email=?",(d.get('email'),)).fetchone()
+    conn.close()
+    if not u: return err('Usuario no encontrado',404)
+    if u['password_hash']!=_hash(d.get('password')): return err('Credenciales inválidas',401)
+    return ok({'id':u['id'],'email':u['email']})
 
 # ── Reservas ──────────────────────────────────────────────────────────────────
 @app.route('/api/reservas',methods=['GET'])

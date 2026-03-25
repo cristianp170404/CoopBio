@@ -156,11 +156,32 @@
   </div>
 </div>
 
+<!-- MODAL REGISTRAR COBROS -->
+<div class="modal-overlay" id="modal-cobros">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-title" id="cobros-titulo">Registrar cobros</div>
+    <div class="form-group">
+      <input type="search" id="cobros-buscar" placeholder="Buscar alumno..." oninput="filtrarCobros()" style="width:100%">
+    </div>
+    <div class="card" style="margin:0;padding:0;max-height:360px;overflow:auto">
+      <table class="table">
+        <thead><tr><th>Alumno</th><th style="text-align:center">Entregadas</th><th style="text-align:center">Rendidas</th><th style="text-align:center">Pendientes</th><th style="width:120px"></th></tr></thead>
+        <tbody id="cobros-tbody"></tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="cerrar('modal-cobros')">Cerrar</button>
+    </div>
+  </div>
+  
+</div>
+
 <div id="toast"></div>
 <script src="/static/api.js"></script>
 <script src="/static/sidebar.js"></script>
 <script>
-var alumnosLista=[], tiposEvento=[], eventoEnRendicion=null, tarjetasEnRendicion=[];
+var alumnosLista=[], tiposEvento=[], eventosLista=[], eventoEnRendicion=null, tarjetasEnRendicion=[];
+var eventoCobroId=null, entregasCobroActual=[];
 var modoRendicion='venta'; // 'venta' | 'ganancia' | 'desmarcar'
 var numTagsActuales=[];
 
@@ -192,7 +213,11 @@ function poblarSelectTipoEv(){
 }
 
 async function cargarEventos(){
-  try{var evs=await API.get('/api/eventos');renderEventos(evs);}
+  try{
+    var evs=await API.get('/api/eventos');
+    eventosLista=evs;
+    renderEventos(evs);
+  } 
   catch(e){showToast(e.message,'error');}
 }
 
@@ -223,6 +248,7 @@ function renderEventos(evs){
       ${entHtml}
       <div class="ev-actions">
         <button class="btn btn-sm btn-primary" onclick="abrirEntrega(${ev.id})">🎟️ Entregar tarjetas</button>
+        <button class="btn btn-sm" onclick="abrirCobrosEvento(${ev.id})">💵 Registrar cobros</button>
         <a href="reporte_evento.html?id=${ev.id}" target="_blank" class="btn btn-sm">📊 Ver reporte</a>
       </div>
     </div>`;
@@ -351,6 +377,49 @@ async function eliminarEntrega(evId,entregaId){
   if(!confirm('¿Eliminar esta entrega? Solo si no hay rendiciones.')) return;
   try{await API.delete('/api/eventos/'+evId+'/entregas/'+entregaId);cargarEventos();showToast('Entrega eliminada');}
   catch(e){showToast(e.message,'error');}
+}
+
+// ── Registrar cobros (selector por alumno) ─────────────────────────────────
+function abrirCobrosEvento(evId){
+  var ev=eventosLista.find(e=>e.id===evId);
+  if(!ev){showToast('Evento no encontrado','error');return;}
+  eventoCobroId=evId;
+  document.getElementById('cobros-titulo').textContent='Registrar cobros – '+ev.nombre;
+  entregasCobroActual=(ev.entregas||[]).filter(e=> (e.cantidad||0)>0 );
+  document.getElementById('cobros-buscar').value='';
+  renderCobrosLista();
+  document.getElementById('modal-cobros').classList.add('open');
+}
+
+function filtrarCobros(){
+  renderCobrosLista();
+}
+
+function renderCobrosLista(){
+  var tbody=document.getElementById('cobros-tbody');
+  if(!tbody) return;
+  var q=(document.getElementById('cobros-buscar').value||'').toLowerCase();
+  var data=(entregasCobroActual||[]).filter(function(e){
+    var nombre=e.alumno_txt || ((e.apellido||'')+', '+(e.nombre||''));
+    return !q || nombre.toLowerCase().includes(q);
+  });
+  if(!data.length){
+    tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text-3);padding:16px">Sin entregas registradas</td></tr>';
+    return;
+  }
+  tbody.innerHTML=data.map(function(e){
+    var total=e.tarjetas_total||0;
+    var rend=e.tarjetas_rendidas||0;
+    var pend=total-rend;
+    var nombre=e.alumno_txt || ((e.apellido||'')+', '+(e.nombre||''));
+    return `<tr>
+      <td>${nombre}</td>
+      <td style="text-align:center">${total}</td>
+      <td style="text-align:center;color:var(--green);font-weight:600">${rend}</td>
+      <td style="text-align:center;color:var(--amber);font-weight:600">${pend}</td>
+      <td style="text-align:right"><button class="btn btn-sm btn-primary" onclick="abrirRendicion(${e.evento_id},${e.alumno_id})">Rendir</button></td>
+    </tr>`;
+  }).join('');
 }
 
 // ── Rendición (clic directo en tarjeta) ────────────────────────────────────

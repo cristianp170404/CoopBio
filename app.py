@@ -293,7 +293,7 @@ def index():
     token=request.cookies.get('session_token') or request.headers.get('Authorization')
     if token and token.startswith('Bearer '): token=token.split(' ',1)[1]
     if not get_user_by_token(token):
-        return redirect('/usuarios.html')
+        return redirect('/login.html')
     return send_from_directory(TEMPLATES_DIR,'index.html')
 
 @app.route('/<path:filename>')
@@ -303,12 +303,12 @@ def serve_static(filename):
         admin_pages = [
             'index.html','alumnos.html','cuotas.html','eventos.html',
             'indumentaria.html','reservas.html','gastos.html',
-            'backup.html','reporte_evento.html'
+            'backup.html','reporte_evento.html','usuarios.html'
         ]
         token=request.cookies.get('session_token') or request.headers.get('Authorization')
         if token and token.startswith('Bearer '): token=token.split(' ',1)[1]
         if filename in admin_pages and not get_user_by_token(token):
-            return redirect('/usuarios.html')
+            return redirect('/login.html')
         p=os.path.join(TEMPLATES_DIR,filename)
         if os.path.exists(p): return send_from_directory(TEMPLATES_DIR,filename)
     p=os.path.join(STATIC_DIR,filename)

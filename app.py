@@ -287,7 +287,7 @@ def index(): return send_from_directory(TEMPLATES_DIR,'index.html')
 def serve_static(filename):
     if filename.endswith('.html'):
         # Páginas administrativas requieren sesión: redirigir a login si no está
-        admin_pages = ['gastos.html','usuarios.html','indumentaria.html','eventos.html']
+        admin_pages = ['gastos.html','indumentaria.html','eventos.html']
         token=request.cookies.get('session_token') or request.headers.get('Authorization')
         if token and token.startswith('Bearer '): token=token.split(' ',1)[1]
         if filename in admin_pages and not get_user_by_token(token):

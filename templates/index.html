@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="/static/css/main.css">
 <style>
 .metrics-grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:14px}
-@media(min-width:900px){.metrics-grid-2{grid-template-columns:repeat(4,1fr)}}
+@media(min-width:900px){.metrics-grid-2{grid-template-columns:repeat(3,1fr)}}
 .event-stat-row{display:flex;gap:24px;flex-wrap:wrap;margin:8px 0}
 .event-stat-item{font-size:12px;color:var(--text-3)}
 .event-stat-item strong{display:block;font-size:18px;font-weight:700;font-family:'Syne',sans-serif}
@@ -69,6 +69,12 @@
           <div class="event-stat-item green"><strong id="ev-rendido">–</strong>Rendido</div>
           <div class="event-stat-item amber"><strong id="ev-pendiente">–</strong>Por rendir</div>
         </div>
+      </div>
+      <div class="metric-card" style="cursor:pointer" onclick="window.location='gastos.html'">
+        <div class="metric-label">Gastos incurridos</div>
+        <div class="metric-value" id="m-gastos">–</div>
+        <div class="metric-sub">Resultado neto: <span id="m-neto">–</span></div>
+        <div class="metric-sub" style="margin-top:4px;color:var(--blue)">Ver detalle de gastos →</div>
       </div>
     </div>
 
@@ -151,6 +157,13 @@ async function cargarDashboard(){
     // Recaudación total
     document.getElementById('m-recaudacion').textContent = '$'+fmt(d.recaudacion_total);
 
+    // Gastos y resultado neto
+    if(typeof d.gastos_total !== 'undefined'){
+      document.getElementById('m-gastos').textContent = '$'+fmt(d.gastos_total);
+      var neto = (typeof d.resultado_neto !== 'undefined') ? d.resultado_neto : (d.recaudacion_total - d.gastos_total);
+      document.getElementById('m-neto').textContent = '$'+fmt(neto);
+    }
+
     // Eventos stats
     if(d.eventos_stats){
       document.getElementById('ev-total').textContent = d.eventos_stats.total_eventos;
@@ -190,7 +203,7 @@ async function cargarDashboard(){
   } catch(e) {
     showToast('Error cargando datos: '+e.message, 'error');
     // Mostrar "--" en todos los valores si falla
-    ['m-alumnos','m-cuotas','m-pendientes','m-stock','m-recaudacion','ev-total','ev-rendido','ev-pendiente']
+    ['m-alumnos','m-cuotas','m-pendientes','m-stock','m-recaudacion','m-gastos','m-neto','ev-total','ev-rendido','ev-pendiente']
       .forEach(id=>{ var el=document.getElementById(id); if(el) el.textContent='–'; });
   }
 }

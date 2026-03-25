@@ -24,7 +24,7 @@
       </div>
       <div class="card">
         <table class="table">
-          <thead><tr><th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Contacto</th><th>Teléfono</th><th>Monto</th><th style="width:130px"></th></tr></thead>
+          <thead><tr><th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Contacto</th><th>Teléfono</th><th>Monto</th><th>Estado</th><th>Saldo</th><th style="width:130px"></th></tr></thead>
           <tbody id="tbody-gastos"></tbody>
         </table>
       </div>
@@ -46,6 +46,36 @@
     <div class="form-group"><label class="form-label">Teléfono</label><input type="tel" id="g-tel"></div>
   </div>
   <div class="form-group"><label class="form-label">Fecha</label><input type="date" id="g-fecha"></div>
+  <div class="form-grid">
+    <div class="form-group">
+      <label class="form-label">Estado</label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="g-pagado">
+        <label for="g-pagado">Pagado</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Forma de pago</label>
+      <select id="g-forma">
+        <option value="">-</option>
+        <option value="Efectivo">Efectivo</option>
+        <option value="Débito">Débito</option>
+        <option value="Crédito">Crédito</option>
+        <option value="Transferencia">Transferencia</option>
+        <option value="Otro">Otro</option>
+      </select>
+    </div>
+  </div>
+  <div class="form-grid">
+    <div class="form-group">
+      <label class="form-label">Anticipo ($)</label>
+      <input type="number" id="g-anticipo" min="0" step="0.01">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Saldo pendiente</label>
+      <input type="text" id="g-saldo" disabled>
+    </div>
+  </div>
   <div class="modal-footer"><button class="btn" onclick="cerrar('modal-gasto')">Cancelar</button>
     <button class="btn btn-primary" onclick="guardarGasto()">Guardar</button></div>
 </div></div>
@@ -72,9 +102,23 @@
 <script>
 var tiposGasto=[], gastos=[];
 function fmt(n){return Number(n||0).toLocaleString('es-AR');}
+function actualizarSaldo(){
+  var m=parseFloat(document.getElementById('g-monto').value)||0;
+  var a=parseFloat(document.getElementById('g-anticipo').value)||0;
+  if(a>m) a=m;
+  var s=Math.max(0,m-a);
+  document.getElementById('g-anticipo').value=a||'';
+  document.getElementById('g-saldo').value='$'+fmt(s);
+}
 async function init(){
   tiposGasto=await API.get('/api/tipos-gasto');
   poblarTipos(); cargarGastos();
+  document.getElementById('g-monto').addEventListener('input',actualizarSaldo);
+  document.getElementById('g-anticipo').addEventListener('input',actualizarSaldo);
+}
+// UX: redirigir al login si no hay usuario local
+if(!localStorage.getItem('user')){
+  window.location='/usuarios.html';
 }
 function poblarTipos(){
   var sel=document.getElementById('filtro-tipo'); sel.innerHTML='<option value="">Todos</option>';
@@ -91,12 +135,68 @@ function renderGastos(){
   document.getElementById('tbody-gastos').innerHTML=gastos.length?gastos.map(g=>`<tr>
     <td>${g.fecha||'–'}</td><td>${g.tipo_nombre||g.tipo_txt||'–'}</td><td>${g.descripcion||'–'}</td><td>${g.contacto||'–'}</td><td>${g.telefono||'–'}</td>
     <td>$${fmt(g.monto)}</td>
+    <td>${g.pagado?('Pagado'+(g.forma_pago?' ('+g.forma_pago+')':'')):(g.saldo>0?'Pendiente':'')}</td>
+    <td>$${fmt(g.saldo||0)}</td>
     <td style="display:flex;gap:6px"><button class="btn btn-sm" onclick="editarGasto(${g.id})">✏️</button><button class="btn btn-sm" style="color:var(--red)" onclick="borrarGasto(${g.id})">✕</button></td>
-  </tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:24px">Sin gastos</td></tr>';
+  </tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--text-3);padding:24px">Sin gastos</td></tr>';
 }
-function abrirModalGasto(){ document.getElementById('g-id').value=''; document.getElementById('g-tipo-id').value=''; document.getElementById('g-tipo-txt').value=''; document.getElementById('g-monto').value=''; document.getElementById('g-desc').value=''; document.getElementById('g-contacto').value=''; document.getElementById('g-tel').value=''; document.getElementById('g-fecha').value=''; document.getElementById('modal-gasto').classList.add('open'); }
-async function guardarGasto(){ var id=document.getElementById('g-id').value; var tipo_id=document.getElementById('g-tipo-id').value||null; var tipo_txt=document.getElementById('g-tipo-txt').value||''; var monto=parseFloat(document.getElementById('g-monto').value)||0; if(!monto){showToast('Monto requerido','error');return;} var body={tipo_id: tipo_id?parseInt(tipo_id):null,tipo_txt,monto,descripcion:document.getElementById('g-desc').value,contacto:document.getElementById('g-contacto').value,telefono:document.getElementById('g-tel').value,fecha:document.getElementById('g-fecha').value||null}; try{ if(id) await API.put('/api/gastos/'+id,body); else await API.post('/api/gastos',body); cerrar('modal-gasto'); tiposGasto=await API.get('/api/tipos-gasto'); cargarGastos(); showToast('Gasto guardado'); }catch(e){showToast(e.message,'error');} }
-function editarGasto(id){ var g=gastos.find(x=>x.id==id); if(!g) return; document.getElementById('g-id').value=g.id; document.getElementById('g-tipo-id').value=g.tipo_id||''; document.getElementById('g-tipo-txt').value=g.tipo_txt||''; document.getElementById('g-monto').value=g.monto; document.getElementById('g-desc').value=g.descripcion||''; document.getElementById('g-contacto').value=g.contacto||''; document.getElementById('g-tel').value=g.telefono||''; document.getElementById('g-fecha').value=g.date||g.fecha||''; document.getElementById('modal-gasto').classList.add('open'); }
+function abrirModalGasto(){
+  document.getElementById('g-id').value='';
+  document.getElementById('g-tipo-id').value='';
+  document.getElementById('g-tipo-txt').value='';
+  document.getElementById('g-monto').value='';
+  document.getElementById('g-desc').value='';
+  document.getElementById('g-contacto').value='';
+  document.getElementById('g-tel').value='';
+  document.getElementById('g-fecha').value='';
+  document.getElementById('g-pagado').checked=false;
+  document.getElementById('g-forma').value='';
+  document.getElementById('g-anticipo').value='';
+  document.getElementById('g-saldo').value='';
+  document.getElementById('modal-gasto').classList.add('open');
+}
+async function guardarGasto(){
+  var id=document.getElementById('g-id').value;
+  var tipo_id=document.getElementById('g-tipo-id').value||null;
+  var tipo_txt=document.getElementById('g-tipo-txt').value||'';
+  var monto=parseFloat(document.getElementById('g-monto').value)||0;
+  if(!monto){showToast('Monto requerido','error');return;}
+  var body={
+    tipo_id: tipo_id?parseInt(tipo_id):null,
+    tipo_txt,
+    monto,
+    descripcion:document.getElementById('g-desc').value,
+    contacto:document.getElementById('g-contacto').value,
+    telefono:document.getElementById('g-tel').value,
+    fecha:document.getElementById('g-fecha').value||null,
+    pagado:document.getElementById('g-pagado').checked,
+    forma_pago:document.getElementById('g-forma').value,
+    anticipo:parseFloat(document.getElementById('g-anticipo').value)||0
+  };
+  try{
+    if(id) await API.put('/api/gastos/'+id,body); else await API.post('/api/gastos',body);
+    cerrar('modal-gasto');
+    tiposGasto=await API.get('/api/tipos-gasto');
+    cargarGastos();
+    showToast('Gasto guardado');
+  }catch(e){showToast(e.message,'error');}
+}
+function editarGasto(id){
+  var g=gastos.find(x=>x.id==id); if(!g) return;
+  document.getElementById('g-id').value=g.id;
+  document.getElementById('g-tipo-id').value=g.tipo_id||'';
+  document.getElementById('g-tipo-txt').value=g.tipo_txt||'';
+  document.getElementById('g-monto').value=g.monto;
+  document.getElementById('g-desc').value=g.descripcion||'';
+  document.getElementById('g-contacto').value=g.contacto||'';
+  document.getElementById('g-tel').value=g.telefono||'';
+  document.getElementById('g-fecha').value=g.date||g.fecha||'';
+  document.getElementById('g-pagado').checked=!!g.pagado;
+  document.getElementById('g-forma').value=g.forma_pago||'';
+  document.getElementById('g-anticipo').value=(g.anticipo!=null&&g.anticipo!==undefined)?g.anticipo:'';
+  actualizarSaldo();
+  document.getElementById('modal-gasto').classList.add('open');
+}
 async function borrarGasto(id){ if(!confirm('Eliminar gasto?')) return; try{ await API.delete('/api/gastos/'+id); cargarGastos(); showToast('Gasto eliminado'); }catch(e){showToast(e.message,'error');} }
 
 async function abrirABMTiposGasto(){ tiposGasto=await API.get('/api/tipos-gasto'); document.getElementById('lista-tipos-gasto').innerHTML=tiposGasto.map(t=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span>${t.nombre}</span><button class="btn btn-sm" style="color:var(--red)" onclick="borrarTipoGasto(${t.id},'${t.nombre}')">Eliminar</button></div>`).join(''); document.getElementById('modal-tipos-gasto').classList.add('open'); }

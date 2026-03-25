@@ -147,6 +147,10 @@ def init_db():
         contacto TEXT DEFAULT '',
         telefono TEXT DEFAULT '',
         fecha TEXT DEFAULT (date('now','localtime')),
+        pagado INTEGER DEFAULT 0,
+        forma_pago TEXT DEFAULT '',
+        anticipo REAL DEFAULT 0,
+        saldo REAL DEFAULT 0,
         creado_en TEXT DEFAULT (datetime('now','localtime'))
     );
     CREATE TABLE IF NOT EXISTS users (
@@ -191,6 +195,10 @@ def init_db():
         "ALTER TABLE evento_entregas ADD COLUMN numeros_json TEXT DEFAULT '[]'",
         "ALTER TABLE reservas ADD COLUMN entregado INTEGER DEFAULT 0",
         "ALTER TABLE prendas ADD COLUMN tipo_prenda_id INTEGER",
+        "ALTER TABLE gastos ADD COLUMN pagado INTEGER DEFAULT 0",
+        "ALTER TABLE gastos ADD COLUMN forma_pago TEXT DEFAULT ''",
+        "ALTER TABLE gastos ADD COLUMN anticipo REAL DEFAULT 0",
+        "ALTER TABLE gastos ADD COLUMN saldo REAL DEFAULT 0",
     ]:
         try: conn.execute(m)
         except: pass
@@ -281,13 +289,22 @@ def _seed_demo(conn):
 
 # ── Servir frontend ─────────────────────────────────────────────────────────
 @app.route('/')
-def index(): return send_from_directory(TEMPLATES_DIR,'index.html')
+def index():
+    token=request.cookies.get('session_token') or request.headers.get('Authorization')
+    if token and token.startswith('Bearer '): token=token.split(' ',1)[1]
+    if not get_user_by_token(token):
+        return redirect('/usuarios.html')
+    return send_from_directory(TEMPLATES_DIR,'index.html')
 
 @app.route('/<path:filename>')
 def serve_static(filename):
     if filename.endswith('.html'):
         # Páginas administrativas requieren sesión: redirigir a login si no está
-        admin_pages = ['gastos.html','indumentaria.html','eventos.html']
+        admin_pages = [
+            'index.html','alumnos.html','cuotas.html','eventos.html',
+            'indumentaria.html','reservas.html','gastos.html',
+            'backup.html','reporte_evento.html'
+        ]
         token=request.cookies.get('session_token') or request.headers.get('Authorization')
         if token and token.startswith('Bearer '): token=token.split(' ',1)[1]
         if filename in admin_pages and not get_user_by_token(token):
@@ -806,16 +823,39 @@ def crear_gasto():
     tipo_id=d.get('tipo_id'); tipo_txt=d.get('tipo_txt',''); monto=d.get('monto')
     if monto is None: return err('Monto requerido')
     conn=get_db()
-    cur=conn.execute("INSERT INTO gastos (tipo_id,tipo_txt,monto,descripcion,contacto,telefono,fecha) VALUES (?,?,?,?,?,?,?)",
-        (tipo_id,tipo_txt,float(monto),d.get('descripcion',''),d.get('contacto',''),d.get('telefono',''),d.get('fecha')))
+    monto_f=float(monto)
+    anticipo=float(d.get('anticipo') or 0)
+    if anticipo>monto_f: anticipo=monto_f
+    pagado=1 if d.get('pagado') else 0
+    # Si se marca pagado y no se cargó anticipo, asumir pago total
+    if pagado and anticipo==0:
+        anticipo=monto_f
+    saldo=max(0,monto_f-anticipo)
+    # Si no está marcado pagado pero el saldo quedó en 0, marcar como pagado
+    if not pagado and saldo==0 and monto_f>0:
+        pagado=1
+    forma_pago=d.get('forma_pago','Efectivo' if pagado else '')
+    cur=conn.execute("INSERT INTO gastos (tipo_id,tipo_txt,monto,descripcion,contacto,telefono,fecha,pagado,forma_pago,anticipo,saldo) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        (tipo_id,tipo_txt,monto_f,d.get('descripcion',''),d.get('contacto',''),d.get('telefono',''),d.get('fecha'),pagado,forma_pago,anticipo,saldo))
     conn.commit(); conn.close(); return ok({'id':cur.lastrowid},201)
 
 @app.route('/api/gastos/<int:id>',methods=['PUT'])
 @require_auth
 def editar_gasto(id):
     d=request.json or {}
-    conn=get_db(); conn.execute("UPDATE gastos SET tipo_id=?,tipo_txt=?,monto=?,descripcion=?,contacto=?,telefono=?,fecha=? WHERE id=?",
-        (d.get('tipo_id'),d.get('tipo_txt'),float(d.get('monto',0)),d.get('descripcion',''),d.get('contacto',''),d.get('telefono',''),d.get('fecha'),id))
+    conn=get_db()
+    monto_f=float(d.get('monto',0) or 0)
+    anticipo=float(d.get('anticipo') or 0)
+    if anticipo>monto_f: anticipo=monto_f
+    pagado=1 if d.get('pagado') else 0
+    if pagado and anticipo==0:
+        anticipo=monto_f
+    saldo=max(0,monto_f-anticipo)
+    if not pagado and saldo==0 and monto_f>0:
+        pagado=1
+    forma_pago=d.get('forma_pago','Efectivo' if pagado else '')
+    conn.execute("UPDATE gastos SET tipo_id=?,tipo_txt=?,monto=?,descripcion=?,contacto=?,telefono=?,fecha=?,pagado=?,forma_pago=?,anticipo=?,saldo=? WHERE id=?",
+        (d.get('tipo_id'),d.get('tipo_txt'),monto_f,d.get('descripcion',''),d.get('contacto',''),d.get('telefono',''),d.get('fecha'),pagado,forma_pago,anticipo,saldo,id))
     conn.commit(); conn.close(); return ok()
 
 @app.route('/api/gastos/<int:id>',methods=['DELETE'])
@@ -956,6 +996,9 @@ def dashboard():
         total_cuotas=conn.execute("SELECT COALESCE(SUM(monto),0) as suma FROM cuotas WHERE estado='Pagado'").fetchone()
         total_ev=conn.execute("SELECT COALESCE(SUM(monto_rendido),0) as suma FROM evento_tarjetas WHERE rendida=1").fetchone()
         total_res=conn.execute("SELECT COALESCE(SUM(sena),0) as suma FROM reservas").fetchone()
+        total_gastos=conn.execute("SELECT COALESCE(SUM(monto),0) as suma FROM gastos").fetchone()
+        recaudacion_total=total_cuotas['suma']+total_ev['suma']+total_res['suma']
+        resultado_neto=recaudacion_total-total_gastos['suma']
         ultimos_pagos=conn.execute("""SELECT c.*,a.apellido,a.nombre,a.tel_tutor
             FROM cuotas c JOIN alumnos a ON c.alumno_id=a.id
             WHERE c.estado='Pagado' ORDER BY c.id DESC LIMIT 5""").fetchall()
@@ -966,8 +1009,16 @@ def dashboard():
             'cuotas_cobradas_mes':{'total':cuotas_mes['suma'],'cantidad':cuotas_mes['total']},
             'pendientes':{'cantidad':pendientes['cnt'],'suma':pendientes['suma']},
             'stock':{'total':stock_total['total'],'reservado':reservado['cnt']},
-            'eventos_stats':{'total_eventos':eventos_stats['total_eventos'],'total_rendido':eventos_stats['total_rendido'],'tarjetas_pendientes':eventos_stats['tarjetas_pendientes'] or 0},
-            'recaudacion_total':total_cuotas['suma']+total_ev['suma']+total_res['suma'],
+            'eventos_stats':{
+                'total_eventos':eventos_stats['total_eventos'],
+                'total_rendido':eventos_stats['total_rendido'],
+                'tarjetas_pendientes':eventos_stats['tarjetas_pendientes'] or 0,
+                # alias para el frontend del panel
+                'total_pendiente_rendicion':eventos_stats['tarjetas_pendientes'] or 0
+            },
+            'recaudacion_total':recaudacion_total,
+            'gastos_total':total_gastos['suma'],
+            'resultado_neto':resultado_neto,
             'ultimos_pagos':[dict(r) for r in ultimos_pagos],
             'reservas_pendientes':[dict(r) for r in reservas_pendientes],
             'eventos':[dict(r) for r in eventos],

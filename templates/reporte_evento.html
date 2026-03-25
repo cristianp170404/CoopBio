@@ -133,6 +133,11 @@ async function cargarReporte(){
   }
 }
 cargarReporte();
+
+// Redirigir al login si no hay sesión local (para reportes restringidos)
+if(!localStorage.getItem('user')){
+  window.location='/usuarios.html';
+}
 </script>
 </body>
 </html>

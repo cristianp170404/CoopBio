@@ -654,7 +654,7 @@ def reporte_evento(id):
     if not ev: conn.close(); return err('Evento no encontrado',404)
     ev=dict(ev)
     entregas=conn.execute("""
-        SELECT ee.*, a.apellido, a.nombre,
+        SELECT ee.*, a.apellido, a.nombre, a.anio as anio_escolar,
             COUNT(et.id) as tarjetas_total,
             SUM(CASE WHEN et.rendida=1 THEN 1 ELSE 0 END) as tarjetas_rendidas,
             COALESCE(SUM(CASE WHEN et.rendida=1 THEN et.monto_rendido ELSE 0 END),0) as monto_rendido
@@ -678,6 +678,28 @@ def reporte_evento(id):
         if aid not in pendientes_por_alumno:
             pendientes_por_alumno[aid]={'alumno_txt':t['alumno_txt'],'numeros':[]}
         pendientes_por_alumno[aid]['numeros'].append(t['numero'])
+
+    # estructura para hoja de control por año y alumno (todas las tarjetas entregadas)
+    control_temp={}
+    for e in el:
+        anio=e.get('anio_escolar') or ''
+        alumno_txt=e.get('alumno_txt') or f"{e.get('apellido','')}, {e.get('nombre','')}".strip(', ')
+        nums=json.loads(e.get('numeros_json') or '[]')
+        key=(anio,alumno_txt)
+        if key not in control_temp:
+            control_temp[key]=set()
+        for n in nums:
+            try:
+                control_temp[key].add(int(n))
+            except Exception:
+                continue
+    control_por_anio={}
+    for (anio,alumno_txt),nums in control_temp.items():
+        control_por_anio.setdefault(anio,[]).append({'alumno_txt':alumno_txt,'numeros':sorted(nums)})
+    control_lista=[]
+    for anio in sorted(control_por_anio.keys(), key=lambda x: (x=='', x)):
+        alumnos_sorted=sorted(control_por_anio[anio], key=lambda a: a['alumno_txt'])
+        control_lista.append({'anio':anio or 'Sin año','alumnos':alumnos_sorted})
     return ok({
         'evento':ev,'total_tarjetas_entregadas':len(tl),'total_entregas':len(el),
         'rendidas':{'cantidad':len(rendidas),
@@ -690,6 +712,7 @@ def reporte_evento(id):
             'numeros':[t['numero'] for t in pendientes],
             'por_alumno':list(pendientes_por_alumno.values())},
         'entregas':el,
+        'control':control_lista,
     })
 
 # ── Tipos de prenda (ABM) ────────────────────────────────────────────────────
